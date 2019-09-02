@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.TransLogMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.TransLog">
+        <id column="id" property="id"/>
+        <result column="order_number" property="orderNumber"/>
+        <result column="field_id" property="fieldId"/>
+        <result column="goods_id" property="goodsId"/>
+        <result column="subject" property="subject"/>
+        <result column="account_type" property="accountType"/>
+        <result column="account_id" property="accountId"/>
+        <result column="channel" property="channel"/>
+        <result column="trans_code" property="transCode"/>
+        <result column="trans_status" property="transStatus"/>
+        <result column="trans_sign" property="transSign"/>
+        <result column="trans_type" property="transType"/>
+        <result column="current_bid" property="currentBid"/>
+        <result column="bond" property="bond"/>
+        <result column="commission" property="commission"/>
+        <result column="amount" property="amount"/>
+        <result column="fee" property="fee"/>
+        <result column="coupons_id" property="couponsId"/>
+        <result column="coupons" property="coupons"/>
+        <result column="coupons_type" property="couponsType"/>
+        <result column="pay_amount" property="payAmount"/>
+        <result column="address_id" property="addressId"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, order_number, field_id, goods_id, subject, account_type, account_id, channel,child_channel, trans_code,trans_status, trans_sign,
+        trans_type, current_bid, bond, commission, amount, fee, coupons_id, coupons, coupons_type, pay_amount, address_id, status, remark, create_time, update_time, version
+    </sql>
+
+    <select id="selectByType" resultType="com.example.auctionapp.entity.TransLog">
+        select id,
+        order_number,
+        field_id,
+        goods_id,
+        subject,
+        account_type,
+        account_id,
+        channel,
+        trans_code,
+        trans_status,
+        trans_sign,
+        trans_type,
+        current_bid,
+        bond,
+        commission,
+        amount,
+        fee,
+        coupons,
+        coupons_type,
+        pay_amount,
+        status,
+        CASE trans_type
+        WHEN 1
+        THEN '充值'
+        WHEN 2
+        THEN '提现'
+        WHEN 4
+        THEN '返还保证金'
+        WHEN 6
+        THEN '保证金+佣金'
+        WHEN 7
+        THEN '佣金'
+        WHEN 10
+        THEN '订单尾款'
+        ELSE ''
+        END AS remark,
+        create_time,
+        update_time,
+        version
+        FROM auction.trans_log
+        <trim prefix="where" suffixOverrides="and">
+            subject = #{customerId}
+            and ((status=1 and trans_type &lt;&gt; 2) or trans_type = 2)
+            <if test="type ==1">
+                and trans_sign=1
+            </if>
+            <if test="type == 2">
+                and trans_sign=0
+            </if>
+        </trim>
+        order by create_time desc
+    </select>
+
+    <select id="selectByOrderNumber" resultType="com.example.auctionapp.entity.TransLog">
+        select
+        <include refid="Base_Column_List"/>
+        from trans_log
+        where order_number = #{orderNumber,jdbcType=TINYINT}
+    </select>
+
+    <select id="getTransNotify" resultType="com.example.auctionapp.entity.TransLog">
+        select
+        <include refid="Base_Column_List"/>
+        from trans_log
+        where
+        trans_type=#{transLog.transType}
+        and
+        subject =#{transLog.subject}
+        and
+        amount =#{transLog.amount}
+        and
+        channel =#{transLog.channel}
+        and create_time between date_add(now(), interval - 5 minute) and now()
+        ORDER BY id desc LIMIT 1
+    </select>
+
+    <update id="updateFailureByOrderNumber" parameterType="com.example.auctionapp.entity.TransLog">
+        update trans_log set status = 2
+        <if test="transCode != null and transCode != ''">
+            , trans_code = #{transCode,jdbcType=TINYINT}
+        </if>
+        where order_number = #{orderNumber,jdbcType=TINYINT}
+    </update>
+
+    <update id="updateSucessById" parameterType="com.example.auctionapp.entity.TransLog">
+        update trans_log
+        set status = 1
+        where id = #{id,jdbcType=TINYINT}
+    </update>
+
+    <update id="updateTransStatusByOrderNumber" parameterType="com.example.auctionapp.entity.TransLog">
+        update trans_log set trans_status = #{transStatus,jdbcType=TINYINT}
+        <if test="transCode != null and transCode != ''">
+            , trans_code = #{transCode,jdbcType=TINYINT}
+        </if>
+        where order_number = #{orderNumber,jdbcType=TINYINT}
+    </update>
+
+</mapper>

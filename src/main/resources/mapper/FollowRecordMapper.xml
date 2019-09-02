@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.FollowRecordMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.FollowRecord">
+        <id column="id" property="id" />
+        <result column="type" property="type" />
+        <result column="customer_id" property="customerId" />
+        <result column="good_id" property="goodId" />
+        <result column="follow_flag" property="followFlag" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, type, customer_id, good_id, follow_flag, status, remark, create_time, update_time, version
+    </sql>
+
+    <!--  -->
+    <select id="selectFollowRecordByCustomerId" resultType="map" parameterType="com.example.auctionapp.entity.FollowRecord">
+        SELECT a.id,
+              a.`status`,
+              (SELECT url FROM images WHERE subject_id = f.good_id and type = 1 LIMIT 1) url,
+              a.goods_name,
+              a.goods_price,
+              a.starting_price
+        FROM follow_record f, auction_goods a
+        WHERE f.good_id = a.id AND f.follow_flag = 1 AND f.`status` = 1 AND a.`status` &lt;&gt; 0
+        AND customer_id = #{customerId} ORDER BY f.create_time DESC,a.status ASC
+    </select>
+</mapper>

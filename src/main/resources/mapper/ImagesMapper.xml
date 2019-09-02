@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.ImagesMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Images">
+        <id column="id" property="id" />
+        <result column="type" property="type" />
+        <result column="subject_id" property="subjectId" />
+        <result column="url" property="url" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, type, subject_id, url, version
+    </sql>
+    <select id="selectBySubjectIdAndTpye" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" /> FROM images
+        WHERE subject_id = #{subjectId,jdbcType=TINYINT} and type = #{type,jdbcType=TINYINT}
+        ORDER BY id asc;
+    </select>
+</mapper>

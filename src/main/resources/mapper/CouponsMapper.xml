@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.CouponsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Coupons">
+        <id column="id" property="id" />
+        <result column="name" property="name" />
+        <result column="coupons_type" property="couponsType" />
+        <result column="coupons_info" property="couponsInfo" />
+        <result column="coupons_condition" property="couponsCondition" />
+        <result column="send_type" property="sendType" />
+        <result column="expire_type" property="expireType" />
+        <result column="expire_date" property="expireDate" />
+        <result column="expire_cycle" property="expireCycle" />
+        <result column="start_date" property="startDate" />
+        <result column="end_date" property="endDate" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, coupons_type, coupons_info, coupons_condition, send_type, expire_type, expire_date, expire_cycle, start_date, end_date, status, remark, create_time, update_time, version
+    </sql>
+
+    <select id="selectListBySendType" resultMap="BaseResultMap">
+        select <include refid="Base_Column_List"/> from coupons
+        where status = 1
+            and send_type = #{sendType,jdbcType=TINYINT}
+            and SYSDATE() BETWEEN start_date and end_date
+    </select>
+
+</mapper>

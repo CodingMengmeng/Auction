@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.DictionaryMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Dictionary">
+        <id column="Id" property="Id" />
+        <result column="type" property="type" />
+        <result column="dic_key" property="dicKey" />
+        <result column="dic_value" property="dicValue" />
+        <result column="memo" property="memo" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        Id, type, dic_key, dic_value, memo
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap" parameterType="com.example.auctionapp.entity.Dictionary">
+        SELECT <include refid="Base_Column_List" /> from dictionary
+    </select>
+</mapper>

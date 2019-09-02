@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.MessageMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Message">
+        <id column="id" property="id" />
+        <result column="type" property="type" />
+        <result column="subject_id" property="subjectId" />
+        <result column="message_info" property="messageInfo" />
+        <result column="send_flag" property="sendFlag" />
+        <result column="read_flag" property="readFlag" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, type, subject_id, message_info, send_flag, read_flag, status, remark, create_time, update_time, version
+    </sql>
+
+    <select id="getMessageToSend" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" /> FROM message
+        WHERE type = #{type,jdbcType=TINYINT} and send_flag = #{sendFlag,jdbcType=TINYINT}
+        ORDER BY create_time DESC
+    </select>
+
+    <update id="updateMessageType" parameterType="com.example.auctionapp.entity.Message">
+        update message set send_flag = #{sendFlag,jdbcType=TINYINT}, update_time = now() where id = #{id,jdbcType=TINYINT}
+    </update>
+
+
+    <select id="getMessageObj" resultType="map" parameterType="integer">
+         SELECT
+              m.goods_id,
+              m.message_info,
+              m.create_time,
+              (SELECT url FROM images WHERE subject_id=m.goods_id AND type=1 LIMIT 1) url,
+              a.goods_name,
+              h.current_bid,
+              m.remark status
+        FROM message m LEFT JOIN auction_goods a ON m.goods_id=a.id LEFT JOIN (select goods_id, user_id, MAX(current_bid) as current_bid from markup_record_his GROUP BY goods_id,user_id ) h ON m.goods_id = h.goods_id AND m.subject_id = h.user_id
+        WHERE m.subject_id = #{subjectId} AND m.type = 2 ORDER BY create_time DESC
+    </select>
+
+    <select id="getDate" resultType="com.example.auctionapp.entity.ext.MessageRet" parameterType="com.example.auctionapp.entity.Message">
+        SELECT DATE_FORMAT(t1.date,'%d') date,t2.customer_id,IFNULL(t2.num,0) num FROM
+            (SELECT DATE_FORMAT(ADDDATE(NOW(),INTERVAL @d DAY),'%Y%m%d') AS date ,@d :=@d - 1 day
+              FROM browse_record,(SELECT @d := 0) temp
+              WHERE ADDDATE(NOW(),INTERVAL @d DAY) >= DATE_FORMAT(DATE_ADD(now(),INTERVAL -6 DAY), '%Y-%m-%d')) t1
+        LEFT JOIN
+            (select DATE_FORMAT(b.update_time,'%Y%m%d') AS date,b.customer_id,COUNT(b.id) AS num from browse_record b,auction_goods a WHERE b.update_time > DATE_FORMAT((SELECT DATE_ADD(now(),INTERVAL -6 DAY)),'%Y-%m-%d') and b.customer_id = #{subjectId} AND a.id = b.goods_id AND a.`status` &lt;&gt; 0
+             GROUP BY DATE_FORMAT(b.update_time,'%Y-%m-%d'),b.customer_id) t2
+	    ON t1.date = t2.date
+	    ORDER BY t1.date ASC
+    </select>
+
+    <select id="selectPriceDetail" resultType="map" parameterType="integer">
+        SELECT
+              m.order_number orderNumber,
+              m.remark,
+              m.user_id userId,
+              MAX(m.current_bid) currentBid,
+              c.head_portrait headPortrait,
+              c.`name`,
+              c.phone,
+              IF(g.id,1,2) `status`
+
+        FROM markup_record_his m
+              LEFT JOIN customer c ON m.user_id = c.id
+              LEFT JOIN goods_order g ON m.goods_id = g.goods_id AND m.user_id = g.customer_id
+        WHERE m.goods_id = #{subjectId}
+        GROUP BY m.user_id
+        ORDER BY MAX(m.current_bid) DESC
+    </select>
+</mapper>

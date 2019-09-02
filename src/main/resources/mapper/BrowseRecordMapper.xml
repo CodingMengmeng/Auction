@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.BrowseRecordMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.BrowseRecord">
+        <id column="id" property="id" />
+        <result column="type" property="type" />
+        <result column="customer_id" property="customerId" />
+        <result column="goods_id" property="goodsId" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, type, customer_id, goods_id, status, remark, create_time, update_time, version
+    </sql>
+
+
+    <select id="selectBrowseRecordByCustomerId" resultType="map" parameterType="com.example.auctionapp.entity.BrowseRecord">
+        SELECT a.id,
+          a.status,
+          (SELECT url FROM images WHERE subject_id = b.goods_id and type = 1 LIMIT 1) url,
+          a.goods_name,
+          a.goods_price,
+          a.starting_price
+        FROM browse_record b,auction_goods a
+        WHERE b.customer_id = #{customerId}
+        AND b.goods_id = a.id
+        AND DATE_FORMAT(b.update_time,'%Y-%m-%d') = #{day} AND a.`status` &lt;&gt; 0
+    </select>
+</mapper>

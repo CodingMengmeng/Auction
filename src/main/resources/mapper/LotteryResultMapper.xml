@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.LotteryResultMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.LotteryResult">
+        <id column="id" property="id" />
+        <result column="customer_id" property="customerId" />
+        <result column="activity_id" property="activityId" />
+        <result column="lottery_id" property="lotteryId" />
+        <result column="result_type" property="resultType" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+
+        <result column="userName" property="userName" />
+        <result column="headPortrait" property="headPortrait" />
+        <result column="expiryCode" property="expiryCode" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, customer_id, activity_id, lottery_id, result_type,status,remark, create_time, update_time, version
+    </sql>
+
+
+    <select id="getLotteryResultList" parameterType="com.example.auctionapp.entity.LotteryResult" resultMap="BaseResultMap">
+        select
+            lr.id,
+            lr.customer_id,
+            lr.activity_id,
+            lr.lottery_id,
+            lr.result_type,
+            lr.status,
+            lr.remark,
+            lr.create_time,
+            lr.update_time,
+            lr.version,
+            c.name as userName,
+            c.head_portrait as headPortrait,
+            li.expiry_code as expiryCode
+        from lottery_result lr,lottery_info li,customer c
+            where lr.lottery_id=li.id
+             and lr.customer_id=c.id
+           <if test="lotteryId != null and lotteryId !='' ">
+               and lr.lottery_id=#{lotteryId}
+          </if>
+        <if test="customerId != null and customerId !='' ">
+              and lr.customer_id=#{customerId}
+        </if>
+        <if test="activityId != null and activityId !='' ">
+              and lr.activity_id=#{activityId}
+        </if>
+    </select>
+
+</mapper>

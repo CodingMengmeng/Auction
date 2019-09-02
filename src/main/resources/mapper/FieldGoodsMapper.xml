@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.FieldGoodsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.FieldGoods">
+        <id column="id" property="id" />
+        <result column="field" property="field" />
+        <result column="goods" property="goods" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, field, goods, status, remark, create_time, update_time, version
+    </sql>
+
+    <select id="selectByGoodsId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List" /> FROM field_goods
+        WHERE goods = #{goodsId,jdbcType=TINYINT} limit 1 ;
+    </select>
+
+</mapper>

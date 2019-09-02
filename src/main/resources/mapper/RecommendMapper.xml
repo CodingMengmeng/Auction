@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.RecommendMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Recommend">
+        <id column="id" property="id" />
+        <result column="type" property="type" />
+        <result column="goods_id" property="goodsId" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, type, goods_id, status, remark, create_time, update_time, version
+    </sql>
+
+    <select id="selectRecommend" resultType="map">
+        SELECT
+              a.id,
+              (SELECT url FROM images WHERE subject_id = a.id and type = 1 LIMIT 1) url,
+              a.`status`,
+              a.goods_name,
+              a.goods_price,
+              a.starting_price
+        FROM auction_goods a,browse_record b
+        WHERE b.goods_id = a.id AND a.`status` = 1 AND a.end_time > NOW()
+        GROUP BY b.goods_id
+        ORDER BY SUM(b.number) DESC,a.end_time DESC
+    </select>
+</mapper>

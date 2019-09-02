@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.mapper.AddressMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Address">
+        <id column="id" property="id" />
+        <result column="type" property="type" />
+        <result column="subject_id" property="subjectId" />
+        <result column="address" property="address" />
+        <result column="default_flag" property="defaultFlag" />
+        <result column="status" property="status" />
+        <result column="phone" property="phone" />
+        <result column="consignee" property="consignee" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+        <result column="consignee" property="consignee" />
+        <result column="phone" property="phone" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, type, subject_id, address,consignee,phone, default_flag, status, remark, create_time, update_time, version,
+        consignee, phone
+    </sql>
+
+</mapper>

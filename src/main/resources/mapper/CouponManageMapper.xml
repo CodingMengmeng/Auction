@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.CouponManageMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.CouponManage">
+        <id column="id" property="id"/>
+        <result column="coupon_id" property="couponId"/>
+        <result column="type" property="type"/>
+        <result column="subject_id" property="subjectId"/>
+        <result column="subject_type" property="subjectType"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+        <result column="send_type" property="sendType"/>
+        <result column="coupons_info" property="couponsInfo"/>
+        <result column="userName" property="userName"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, coupon_id, type, subject_id, subject_type,expire_time,status, remark, create_time, update_time, version
+    </sql>
+
+    <update id="updateByExpireTime">
+        update coupon_manage
+        set status=2
+        where expire_time &lt; NOW()
+        AND subject_id = #{customerId}
+        AND type = 1
+        AND subject_type = 1
+    </update>
+
+    <select id="selectDiscountCoupon" resultType="java.util.Map">
+        select cm.id         as couponId,
+               cm.type,
+               cm.subject_id,
+               cm.subject_type,
+               co.coupons_condition as couponsCondition,
+               cm.create_time       as createTime,
+               cm.status,
+               cm.expire_time       as expireTime,
+               co.name,
+               co.coupons_type      as couponsType,
+               co.coupons_info      as couponsInfo,
+               co.send_type         as sendType,
+               co.start_date        as startDate,
+               co.end_date          as endDate,
+               co.remark
+        from auction.coupon_manage cm,
+             auction.coupons co
+        where cm.coupon_id = co.id
+          and cm.type = 1
+          and cm.subject_id = #{customerId}
+          and cm.status = #{status}
+         order by cm.expire_time asc
+    </select>
+    <update id="updateStatusByIdForUsed">
+        update coupon_manage
+        set status=1
+        where id = #{id}
+    </update>
+
+    <select id="getCouponManageByUserAndType" resultType="java.lang.Integer">
+        select
+            count(1)
+            from auction.coupon_manage cm,
+            auction.coupons co
+            where cm.coupon_id = co.id
+            and cm.subject_id =  #{customerId}
+            and cm.subject_type=1
+            and cm.status=0
+            and cm.expire_time &gt;= NOW()
+            <if test="sendType != null and sendType !='' ">
+               and co.send_type=#{sendType}
+            </if>
+            and co.coupons_type=  #{couponsType}
+    </select>
+
+    <select id="getActivityCouponByUser" resultMap="BaseResultMap">
+        select
+            cm.id,
+            cm.coupon_id,
+            cm.type,
+            cm.subject_id,
+            cm.subject_type,
+            cm.expire_time,
+            cm.status,
+            cm.remark,
+            cm.create_time,
+            cm.update_time,
+            cm.version
+            from auction.coupon_manage cm,
+            auction.coupons co
+            where cm.coupon_id = co.id
+            and cm.subject_id =  #{customerId}
+            and cm.subject_type=1
+            and cm.status=0
+            and cm.expire_time &gt;= NOW()
+            and co.coupons_type=  #{couponsType}
+            order by cm.expire_time asc
+    </select>
+
+    <select id="getCouponManageForTop" parameterType="java.lang.Integer"  resultMap="BaseResultMap">
+        select
+            cm.id,
+            cm.coupon_id,
+            cm.type,
+            cm.subject_id,
+            cm.subject_type,
+            cm.expire_time,
+            cm.status,
+            cm.remark,
+            cm.create_time,
+            cm.update_time,
+            cm.version,
+            co.send_type,
+            co.coupons_info,
+            cu.`name` as userName
+                from auction.coupon_manage cm,
+                      auction.coupons co,
+					  customer cu
+                where cm.coupon_id = co.id
+						and  cm.subject_id=cu.id
+						and  cm.subject_type=1
+                        and cm.status=0
+                        and cm.status=0
+                        and cm.expire_time &gt;= NOW()
+                        and co.coupons_type=  #{couponsType}
+                        order by cm.create_time desc
+                        limit 5
+    </select>
+
+</mapper>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.BankMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Bank">
+        <id column="id" property="id" />
+        <result column="user_id" property="userId" />
+        <result column="id_card" property="idCard" />
+        <result column="acct_name" property="acctName" />
+        <result column="bank_phone" property="bankPhone" />
+        <result column="bank_name" property="bankName" />
+        <result column="bank_card_no" property="bankCardNo" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, user_id, id_card, acct_name, bank_phone, bank_name, bank_card_no, remark, create_time, update_time, version
+    </sql>
+
+</mapper>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.AuctionFieldMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.AuctionField">
+        <id column="id" property="id" />
+        <result column="number" property="number" />
+        <result column="title" property="title" />
+        <result column="begin_time" property="beginTime" />
+        <result column="end_time" property="endTime" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, number, title, begin_time, end_time, remark, create_time, update_time, version
+    </sql>
+
+    <select id="selectAuctionField" resultType="com.example.auctionapp.entity.AuctionField">
+        SELECT id,(SELECT url FROM images WHERE subject_id = auction_field.id AND type = 2 LIMIT 1) remark,title
+        FROM auction_field
+    </select>
+
+    <select id="selectAuctionFieldOfGoods" resultType="map" parameterType="integer">
+        SELECT a.id,
+              (SELECT url FROM images WHERE subject_id = a.id AND type=1 LIMIT 1) url,
+              a.goods_name,
+              a.goods_price,
+              a.starting_price
+        FROM auction_field d,field_goods f,auction_goods a
+        WHERE d.id = f.field AND f.goods = a.id AND a.`status` = 1 AND d.id = #{fieldId}
+    </select>
+</mapper>

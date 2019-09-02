@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.DailySelectionMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.DailySelection">
+        <id column="id" property="id" />
+        <result column="type" property="type" />
+        <result column="goods_id" property="goodsId" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, type, goods_id, status, remark, create_time, update_time, version
+    </sql>
+
+    <!-- where条件详解： 查询a.status = 2 or 1 拍品已上拍 已结束的都查出来，  很大概率没有到结束时间，拍品已经结束，所以返回拍品状态，判定哪些拍品已结束，哪些还在参拍  -->
+    <select id="selectDailySelection" resultType="map">
+        SELECT a.id,
+              (SELECT url FROM images WHERE `type` = 1 AND  subject_id = d.goods_id LIMIT 1) url,
+              a.`status`,
+              a.goods_name,
+              a.goods_price,
+              a.starting_price
+        FROM daily_selection d,auction_goods a
+        WHERE d.goods_id = a.id AND d.`status` = 1 AND  a.`status` = 1 AND a.end_time > NOW()
+    </select>
+</mapper>

@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.AuctionGoodsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.AuctionGoods">
+        <id column="id" property="id"/>
+        <result column="organizer_id" property="organizerId"/>
+        <result column="goods_name" property="goodsName"/>
+        <result column="goods_type" property="goodsType"/>
+        <result column="begin_time" property="beginTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="postpone_time" property="postponeTime"/>
+        <result column="goods_price" property="goodsPrice"/>
+        <result column="profit" property="profit"/>
+        <result column="starting_price" property="startingPrice"/>
+        <result column="single_commission" property="singleCommission"/>
+        <result column="bond" property="bond"/>
+        <result column="number" property="number"/>
+        <result column="auction_num" property="auctionNum"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, organizer_id, goods_name, goods_type, begin_time, end_time, postpone_time, goods_price, profit, starting_price, single_commission, bond, number, auction_num, status, remark, create_time, update_time, version
+    </sql>
+
+
+    <select id="proceedAuctionGoods" resultType="map" parameterType="string">
+        SELECT a.id,
+        (SELECT url FROM images WHERE subject_id = a.id AND type=1 LIMIT 1) url,
+        a.goods_name,
+        a.goods_price,
+        a.starting_price
+        FROM auction_goods a,goods_type g
+        WHERE a.goods_type=g.id AND a.begin_time &lt; NOW() and NOW() &lt; a.end_time
+        AND a.status = 1
+        <if test="name != null and name != ''">
+            AND (goods_name like "%"#{name}"%" OR g.name like "%"#{name}"%")
+        </if>
+        ORDER BY a.create_time DESC
+    </select>
+
+
+    <select id="selectProceedAuctionGoods" resultType="com.example.auctionapp.entity.AuctionGoods">
+        SELECT ag.id,
+               ag.organizer_id,
+               ag.goods_name,
+               ag.goods_type,
+               ag.begin_time,
+               ag.end_time,
+               ag.postpone_time,
+               ag.goods_price,
+               ag.profit,
+               ag.starting_price,
+               ag.single_commission,
+               ag.bond,
+               ag.number,
+               ag.auction_num,
+               ag.status,
+               ag.remark,
+               ag.create_time,
+               ag.update_time,
+               ag.version,
+               img.url as goodsImg
+        FROM auction.auction_goods ag
+            LEFT join auction.images img
+        on img.subject_id = ag.id and img.type = 1
+        WHERE ag.begin_time
+         &gt; NOW()
+         &lt; ag.end_time
+            AND ag.status = 1
+
+    </select>
+
+    <select id="polling" resultType="map">
+        SELECT g.actual_payment, a.goods_name, c.`name`
+        FROM goods_order g, auction_goods a
+           ,
+            customer c
+        WHERE g.goods_id = a.id
+            AND g.customer_id = c.id
+        ORDER BY g.create_time
+        DESC
+    </select>
+
+    <select id="selectCustomerCompete" resultType="com.example.auctionapp.entity.AuctionGoods">
+        select DISTINCT ag.goods_name,
+                        ag.id,
+                        ag.organizer_id,
+                        ag.goods_type,
+                        ag.begin_time,
+                        ag.end_time,
+                        ag.postpone_time,
+                        ag.goods_price,
+                        ag.profit,
+                        ag.starting_price,
+                        ag.single_commission,
+                        ag.bond,
+                        ag.number,
+                        ag.auction_num,
+                        ag.status,
+                        ag.remark,
+                        ag.create_time,
+                        ag.update_time,
+                        ag.version,
+                        img.url as goodsImg
+        from auction.auction_goods ag
+            left join
+           (select distinct mr.goods_id
+           , mr.create_time
+           , cu.id as customerId
+            from (select * from auction.markup_record union select * from auction.markup_record_his) mr
+           ,
+            auction.customer cu
+            where cu.id = mr.user_id) mr
+        on ag.id = mr.goods_id
+            left join
+            auction.customer cu on cu.id = mr.customerId
+            left join (SELECT ag.id, img.url
+            FROM auction.images img,
+            auction.auction_goods ag
+            WHERE img.subject_id = ag.id
+            AND img.type = 1
+            GROUP BY img.subject_id) img on img.id = ag.id
+        where cu.id = #{customerId}
+            and DATE_SUB(CURDATE()
+            , INTERVAL 7 DAY) &lt;= DATE (mr.create_time)
+
+    </select>
+    <select id="selectCustomerAttention" resultType="com.example.auctionapp.entity.AuctionGoods">
+        select ag.id,
+               ag.organizer_id,
+               ag.goods_name,
+               ag.goods_type,
+               ag.begin_time,
+               ag.end_time,
+               ag.postpone_time,
+               ag.goods_price,
+               ag.profit,
+               ag.starting_price,
+               ag.single_commission,
+               ag.bond,
+               ag.number,
+               ag.auction_num,
+               ag.status,
+               ag.remark,
+               ag.create_time,
+               ag.update_time,
+               ag.version,
+               img.url as goodsImg
+        from auction_goods ag
+            left join
+           (select distinct fr.good_id
+           , cu.id as customerId
+            from follow_record fr
+           ,
+            customer cu
+            where cu.id = fr.customer_id
+            and fr.type = 1
+            and fr.follow_flag = 1) fr
+        on ag.id = fr.good_id
+            left join
+            customer cu on cu.id = fr.customerId
+            left join (SELECT cu.id, img.url
+            FROM images img,
+            customer cu
+            WHERE img.subject_id = cu.id
+            AND img.type = 1
+            GROUP BY img.subject_id) img on img.id = ag.id
+        where cu.id = #{customerId}
+            and (ag.begin_time &lt;= now() and ag.end_time &gt;= now())
+    </select>
+    <select id="selectCustomerBrowse" resultType="com.example.auctionapp.entity.AuctionGoods">
+
+        select ag.id,
+               ag.organizer_id,
+               ag.goods_name,
+               ag.goods_type,
+               ag.begin_time,
+               ag.end_time,
+               ag.postpone_time,
+               ag.goods_price,
+               ag.profit,
+               ag.starting_price,
+               ag.single_commission,
+               ag.bond,
+               ag.number,
+               ag.auction_num,
+               ag.status,
+               ag.remark,
+               ag.create_time,
+               ag.update_time,
+               ag.version,
+               img.url as goodsImg
+        from auction_goods ag
+            left join
+           (select distinct br.goods_id
+           , cu.id as customerId
+           , br.create_time
+            from browse_record br
+           ,
+            customer cu
+            where cu.id = br.customer_id
+            and br.type = 1
+            ) br
+        on ag.id = br.goods_id
+            left join
+            customer cu on cu.id = br.customerId
+            left join (SELECT ag.id, img.url
+            FROM auction.images img,
+            auction.auction_goods ag
+            WHERE img.subject_id = ag.id
+            AND img.type = 1
+            GROUP BY img.subject_id) img on img.id = ag.id
+        where cu.id = #{customerId}
+            and (ag.begin_time &lt;= now() and ag.end_time &gt;= now())
+        order by br.create_time
+        desc
+
+    </select>
+
+
+    <select id="getGoodsDetailById" resultType="map" parameterType="com.example.auctionapp.entity.AuctionGoods">
+        SELECT a.end_time,
+        a.begin_time,
+        a.goods_name,
+        a.goods_price,
+        a.starting_price,
+        a.`status`,
+        a.bond,
+        a.single_commission,
+        <choose>
+            <when test="customerId != null">
+                IFNULL(f.follow_flag, 0) follow_flag,
+            </when>
+            <otherwise>
+                0 follow_flag,
+            </otherwise>
+        </choose>
+        IFNULL(MAX(m.current_bid),0) current_bid,
+        IFNULL(MAX(m.update_time),0) newTime,
+        IFNULL((select COUNT(ms.id) from (select * from markup_record union select * from markup_record_his) ms where
+        ms.goods_id = a.id),0) numPro,
+        IFNULL((select sum(`number`) from browse_record where goods_id = a.id),0) numBro,
+        <choose>
+            <when test="customerId != null">
+                IFNULL((select max(shooting_times) from markup_record where goods_Id = a.id and user_id =
+                #{customerId}),0) shooting_times
+            </when>
+            <otherwise>
+                0 shooting_times
+            </otherwise>
+        </choose>
+        FROM auction_goods a
+        LEFT JOIN follow_record f ON f.good_id = a.id
+        <if test="customerId != null">
+            and f.customer_id = #{customerId}
+        </if>
+        LEFT JOIN (select * from markup_record union select * from markup_record_his) m ON m.goods_id = a.id
+        LEFT JOIN browse_record b ON b.goods_id = a.id
+        WHERE a.id = #{id}
+        group by a.id
+    </select>
+
+    <select id="getMarkupRecord" resultType="map" parameterType="com.example.auctionapp.entity.AuctionGoods">
+        SELECT IFNULL(current_bid, 0) current_bid, bond, commission, create_time
+        FROM markup_record
+        WHERE user_id = #{customerId}
+          and goods_id = #{id}
+        ORDER BY id DESC
+    </select>
+
+
+    <select id="selectByType" resultType="com.example.auctionapp.entity.AuctionGoods">
+        select ag.id,
+        ag.organizer_id,
+        ag.goods_name,
+        ag.goods_type,
+        ag.begin_time,
+        ag.end_time,
+        ag.postpone_time,
+        ag.goods_price,
+        ag.profit,
+        ag.starting_price,
+        ag.single_commission,
+        ag.bond,
+        ag.number,
+        ag.auction_num,
+        ag.status,
+        ag.remark,
+        ag.create_time,
+        ag.update_time,
+        ag.version,
+        img.id,
+        img.url as goodsImg
+        from auction.auction_goods ag
+        left join auction.goods_type at on at.id=ag.goods_type
+        left join (select * from auction.images i where i.type=1 GROUP BY i.subject_id) img on img.subject_id = ag.id
+        where at.id=#{type}
+        and at.`rank`=2
+        and ag.status=1
+        <if test="sort==1">
+            and ag.begin_time &lt;= NOW()
+        </if>
+        <if test="sort==2">
+            and ag.begin_time &gt; NOW()
+        </if>
+        ORDER BY ag.begin_time DESC
+    </select>
+
+    <select id="getExpireAuctionGoods" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM auction_goods
+        WHERE status = 1 and end_time &lt; now()
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectAuctionGoodsOfIdList" resultType="integer">
+        SELECT a.id
+        FROM auction_goods a
+        WHERE a.begin_time &lt; NOW()
+          AND NOW() &lt; a.end_time
+          AND a.status = 1
+        ORDER BY rand()
+        LIMIT 8;
+    </select>
+
+    <select id="selectRandomAuctionGoods" resultType="map">
+        SELECT
+        a.id,
+        (
+        SELECT url
+        FROM images
+        WHERE subject_id = a.id AND type=1
+        LIMIT 1
+        ) url,
+        a.goods_name,
+        a.goods_price,
+        a.starting_price
+        FROM auction_goods a,goods_type g
+        WHERE a.goods_type=g.id
+        AND a.begin_time &lt; NOW()
+        AND NOW() &lt; a.end_time
+        AND a.status = 1
+        AND a.id IN
+        <foreach collection="list" item="id" index="index" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+
+    <select id="selectCustomerInCompete" resultType="com.example.auctionapp.vo.AuctionGoodsVO">
+
+        select DISTINCT ag.goods_name,
+                        ag.id,
+                        ag.organizer_id,
+                        ag.goods_type,
+                        ag.begin_time,
+                        ag.end_time,
+                        ag.postpone_time,
+                        ag.goods_price,
+                        ag.profit,
+                        ag.starting_price,
+                        ag.single_commission,
+                        ag.bond,
+                        ag.number,
+                        ag.auction_num,
+                        ag.status,
+                        ag.remark,
+                        ag.create_time,
+                        ag.update_time,
+                        ag.version,
+                        img.url      as goodsImg,
+                        bro_r.number as browseNumber
+        from auction.auction_goods ag
+            left join
+           (select distinct mr.goods_id
+           , mr.create_time
+           , cu.id as customerId
+            from (select * from auction.markup_record union select * from auction.markup_record_his) mr
+           ,
+            auction.customer cu
+            where cu.id = mr.user_id  order by mr.create_time DESC ) mr
+        on ag.id = mr.goods_id
+            left join
+            auction.customer cu on cu.id = mr.customerId
+            left join (SELECT ag.id, img.url
+            FROM auction.images img,
+            auction.auction_goods ag
+            WHERE img.subject_id = ag.id
+            AND img.type = 1
+            GROUP BY img.subject_id) img on img.id = ag.id
+            left join (select * from browse_record ) bro_r on ag.id=bro_r.goods_id and bro_r.customer_id= #{customerId}
+        where cu.id = #{customerId}
+            and ag.status=1
+           /* and DATE_SUB(CURDATE()
+            , INTERVAL 7 DAY) &lt;= DATE (mr.create_time)*/
+          order by mr.create_time DESC
+    </select>
+    <select id="selectCustomerOutCompete" resultType="com.example.auctionapp.vo.AuctionGoodsVO">
+        select DISTINCT ag.goods_name,
+                        ag.id,
+                        ag.organizer_id,
+                        ag.goods_type,
+                        ag.begin_time,
+                        ag.end_time,
+                        ag.postpone_time,
+                        ag.goods_price,
+                        ag.profit,
+                        ag.starting_price,
+                        ag.single_commission,
+                        ag.bond,
+                        ag.number,
+                        ag.auction_num,
+                        ag.status,
+                        ag.remark,
+                        ag.update_time,
+                        ag.version,
+                        img.url                                                 as goodsImg,
+                        bro_r.number                                            as browseNumber,
+                        (select name from customer where id = gor.customer_id)  as customerName,
+                        gor.create_time ,
+                        (select phone from customer where id = gor.customer_id) as phone,
+                        gor.remark as orderRemark,
+                        gor.customer_id as orderCustomerId
+        from auction.auction_goods ag
+            left join
+           (select distinct mr.goods_id
+           , mr.create_time
+           , cu.id as customerId
+            from (select * from auction.markup_record union select * from auction.markup_record_his) mr
+           ,
+            auction.customer cu
+            where cu.id = mr.user_id) mr
+        on ag.id = mr.goods_id
+            left join
+            auction.customer cu on cu.id = mr.customerId
+            left join (SELECT ag.id, img.url
+            FROM auction.images img,
+            auction.auction_goods ag
+            WHERE img.subject_id = ag.id
+            AND img.type = 1
+            GROUP BY img.subject_id) img on img.id = ag.id
+            left join (select * from browse_record ) bro_r on ag.id=bro_r.goods_id and bro_r.customer_id= #{customerId}
+            left join goods_order gor on ag.id=gor.goods_id
+        where cu.id = #{customerId}
+            and ag.status = 2
+           /* and DATE_SUB(CURDATE()
+            , INTERVAL 7 DAY) &lt;= DATE (mr.create_time)*/
+           order by gor.create_time DESC
+    </select>
+</mapper>

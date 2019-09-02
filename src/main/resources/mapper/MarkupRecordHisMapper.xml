@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.MarkupRecordHisMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.MarkupRecordHis">
+        <id column="id" property="id" />
+        <result column="order_number" property="orderNumber" />
+        <result column="cms_status" property="cmsStatus" />
+        <result column="field_id" property="fieldId" />
+        <result column="goods_id" property="goodsId" />
+        <result column="current_bid" property="currentBid" />
+        <result column="total_number" property="totalNumber" />
+        <result column="shooting_times" property="shootingTimes" />
+        <result column="user_id" property="userId" />
+        <result column="bond" property="bond" />
+        <result column="commission" property="commission" />
+        <result column="coupons" property="coupons" />
+        <result column="coupons_type" property="couponsType" />
+        <result column="pay_amount" property="payAmount" />
+        <result column="pay_type" property="payType" />
+        <result column="status" property="status" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, order_number,cms_status, goods_id, current_bid, total_number, shooting_times, user_id, bond, commission, coupons, coupons_type, pay_amount, pay_type, status, remark, create_time, update_time, version
+    </sql>
+
+    <insert id="batInsert" >
+        insert into markup_record_his (select * from markup_record where goods_id = #{goodsId,jdbcType=TINYINT});
+    </insert>
+</mapper>

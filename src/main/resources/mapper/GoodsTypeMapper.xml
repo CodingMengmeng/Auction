@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.GoodsTypeMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.GoodsType">
+        <id column="id" property="id" />
+        <result column="pt_id" property="ptId" />
+        <result column="sort" property="sort" />
+        <result column="name" property="name" />
+        <result column="rank" property="rank" />
+        <result column="type_img" property="typeImg" />
+        <result column="remark" property="remark" />
+        <result column="create_time" property="createTime" />
+        <result column="update_time" property="updateTime" />
+        <result column="version" property="version" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, pt_id, sort, name, rank, type_img,remark, create_time, update_time, version
+    </sql>
+
+    <select id="selectHierarchical" resultType="java.util.Map">
+
+    </select>
+
+    <select id="selectOneClassify" resultType="com.example.auctionapp.vo.ClassifyVo">
+        SELECT
+            id,
+            `name`
+        FROM goods_type
+        WHERE rank = 1;
+    </select>
+
+    <select id="selectAuctionGoodsWhereType" resultType="com.example.auctionapp.vo.HomeGoodsVo">
+        SELECT
+            a.id,
+            (
+            SELECT url
+            FROM images
+            WHERE subject_id = a.id
+                AND type=1
+            LIMIT 1
+            ) url,
+            a.goods_name AS goodsName,
+            a.goods_price AS goodsPrice,
+            a.starting_price AS startingPrice
+        FROM auction_goods a,goods_type g
+        WHERE a.goods_type=g.id
+            AND a.status = 1
+        <if test="parentId != null">
+            AND g.pt_id = #{parentId}
+        </if>
+        <if test="name != null and name != ''">
+            AND (goods_name like "%"#{name}"%" OR g.name like "%"#{name}"%")
+        </if>
+        ORDER BY a.create_time DESC
+    </select>
+</mapper>

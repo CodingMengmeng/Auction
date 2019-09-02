@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.CustomerMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Customer">
+        <id column="id" property="id"/>
+        <result column="head_portrait" property="headPortrait"/>
+        <result column="name" property="name"/>
+        <result column="phone" property="phone"/>
+        <result column="sex" property="sex"/>
+        <result column="agent_id" property="agentId"/>
+        <result column="real_name" property="realName"/>
+        <result column="identity_card" property="identityCard"/>
+        <result column="identity_card_type" property="identityCardType"/>
+        <result column="verify_status" property="verifyStatus"/>
+        <result column="address" property="address"/>
+        <result column="open_id" property="openId"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, head_portrait, name, phone,case sex when 1 then '男' when 0 then '女' end,
+        agent_id,real_name,identity_card,identity_card_type,
+       verify_status,address,open_id,remark, create_time,update_time, version
+    </sql>
+
+    <select id="selectCustomerAndAccount" resultType="java.util.Map">
+        select cu.id,
+               cu.head_portrait                                     as headPortrait,
+               cu.name,
+               cu.phone,
+               cu.password,
+               case sex when 1 then '男' when 0 then '女' else '' end as sex,
+               cu.agent_id,
+               cu.address,
+               cu.remark,
+               cu.create_time                                       as createTime,
+               cu.update_time,
+               cu.version,
+               cu.verify_status                                     as verifyStatus,
+               cu.identity_card                                     as identityCard,
+               cu.identity_card_type                                as identityCardType,
+               cu.real_name                                         as realName,
+               ac.balance,
+               ac.frozen
+        from customer cu
+                 left join account as ac on ac.subject_id = cu.id
+        where ac.type = 1
+          and ac.status = 1
+          and cu.id = #{id}
+    </select>
+
+    <!--
+        查询客户信息，根据id
+    -->
+    <select id="selectCustomerDataAndAccount" resultType="com.example.auctionapp.vo.CustomerDataVo">
+        SELECT cu.id,
+			cu.head_portrait,
+			cu.name,
+            cu.phone,
+            cu.password,
+			case cu.sex when 1 then '男' when 0 then '女' else '' end as sex,
+            cu.agent_id AS agentId,
+            cu.address,
+            cu.remark,
+            cu.create_time                                       as createTime,
+            cu.update_time                                       AS updateTime,
+            cu.version,
+            cu.verify_status                                     as verifyStatus,
+            cu.identity_card                                     as identityCard,
+            cu.identity_card_type                                as identityCardType,
+            cu.real_name                                         as realName,
+			ac.balance,
+			ac.frozen,
+			ac.with_beans AS withBeans
+        FROM customer cu LEFT JOIN account ac ON ac.subject_id = cu.id
+        WHERE ac.type = 1
+          AND ac.status = 1
+          AND cu.id = #{id}
+    </select>
+
+
+    <select id="selectBadgeLevelById" resultType="com.example.auctionapp.vo.BadgeLevelVo">
+        SELECT
+			c.customer_id,
+			l.`level`,
+			l.emblem_url,
+			a.`name`
+		FROM badge_customer c
+			LEFT JOIN badge_level l ON c.emblem_id = l.id
+			LEFT JOIN badge a ON l.badge_id = a.id
+		WHERE c.customer_id = #{id}
+    </select>
+
+    <select id="selectCustomerGoodsSketch" resultType="java.util.Map">
+        SELECT ifnull(count(mr.goods_id), 0) as competeSum,
+        ifnull(fr.recordSum, 0) as recordSum,
+        ifnull(br.browseSun, 0) as browseSun,
+        ifnull(cm.discountSum, 0) as discountSum
+        FROM (select distinct mrall.goods_id
+              from (select * from markup_record union select * from markup_record_his) mrall
+              where mrall.user_id = #{id}
+                  /*and (DATE_SUB(CURDATE(), INTERVAL 7 DAY) &lt;= DATE(mrall.create_time))*/
+        ) as mr,
+        (SELECT COUNT(1) AS recordSum
+        FROM follow_record fr
+        WHERE fr.customer_id = #{id}
+        and fr.follow_flag = 1) fr,
+        (SELECT COUNT(1) AS browseSun
+        FROM browse_record br
+        WHERE br.customer_id = #{id} and DATE_SUB(CURDATE(),INTERVAL 7 DAY) &lt; DATE(br.update_time)) br,
+        (SELECT COUNT(1) AS discountSum
+        FROM coupon_manage cm
+        WHERE cm.subject_id = #{id}
+        AND cm.type = 1
+        AND cm.status = 0) cm
+    </select>
+
+    <select id="selectOrderInfo" resultType="java.util.Map">
+        select go.status as k, count(1) as v
+        from goods_order go
+        where go.customer_id = #{id}
+        group by go.status
+
+    </select>
+
+    <select id="selectGuessYouLike" resultType="com.example.auctionapp.entity.AuctionGoods">
+
+        SELECT ag.id,
+               ag.organizer_id,
+               ag.goods_name,
+               ag.goods_type,
+               ag.begin_time,
+               ag.end_time,
+               ag.postpone_time,
+               ag.goods_price,
+               ag.profit,
+               ag.starting_price,
+               ag.single_commission,
+               ag.bond,
+               ag.number,
+               ag.auction_num,
+               ag.status,
+               ag.remark,
+               ag.create_time,
+               ag.update_time,
+               ag.version,
+               img.url as goodsImg
+        FROM (auction_goods ag,
+            (SELECT gt.id, gt.pt_id, ag.goods_name, COUNT(1)
+             FROM customer cu,
+                  auction_goods ag,
+                  goods_type gt,
+                  browse_record br
+             WHERE cu.id = br.customer_id
+               AND br.goods_id = ag.id
+               AND gt.id = ag.goods_type
+             GROUP BY gt.pt_id) guess_goods,
+            goods_type gt,
+            customer cu)
+                 left join
+             (SELECT ag.id, img.url
+              FROM images img,
+                   auction_goods ag
+              WHERE img.subject_id = ag.id
+                AND img.type = 1
+              group by img.subject_id) img on img.id = ag.id
+
+        WHERE ag.goods_type = gt.id
+          AND gt.pt_id = guess_goods.pt_id
+          and ag.status = 1
+          AND cu.id = #{id}
+    </select>
+
+    <select id="selectVerifyAuthen" resultType="java.util.Map">
+        select cu.id, ac.password
+        from customer cu
+                 left join account ac on cu.id = ac.subject_id
+        where ac.type = 1
+          and cu.id = #{customerId}
+    </select>
+</mapper>

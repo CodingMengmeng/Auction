@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.MarkupRecordMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.MarkupRecord">
+        <id column="id" property="id"/>
+        <result column="order_number" property="orderNumber"/>
+        <result column="cms_status" property="cmsStatus"/>
+        <result column="field_id" property="fieldId"/>
+        <result column="goods_id" property="goodsId"/>
+        <result column="current_bid" property="currentBid"/>
+        <result column="total_number" property="totalNumber"/>
+        <result column="shooting_times" property="shootingTimes"/>
+        <result column="user_id" property="userId"/>
+        <result column="bond" property="bond"/>
+        <result column="commission" property="commission"/>
+        <result column="coupons" property="coupons"/>
+        <result column="coupons_type" property="couponsType"/>
+        <result column="pay_amount" property="payAmount"/>
+        <result column="pay_type" property="payType"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, order_number, cms_status, field_id, goods_id, current_bid, total_number, shooting_times, user_id, bond, commission, coupons, coupons_type, pay_amount, pay_type, status, remark, create_time, update_time, version
+    </sql>
+
+    <!-- 查询出 拍品id 当前出价最高值 参拍总次数 保证金总数 佣金 总优惠金额  -->
+    <select id="selectSummaryByGoodsId" resultType="com.example.auctionapp.entity.ext.MarkupRecordSummary">
+        SELECT goods_id          as goodsId,
+               max(current_bid)  as maxCurrentBid,
+               max(total_number) as maxTotalNumber,
+               sum(bond)         as sumBond,
+               sum(commission)   as sumCommission,
+               sum(coupons)      as sumCoupons
+        FROM markup_record
+        WHERE cms_status = 1
+          and goods_id = #{goodsId,jdbcType=TINYINT}
+        GROUP BY goods_id;
+    </select>
+
+    <select id="selectSummaryByGoodsIdAndUserId" resultType="com.example.auctionapp.entity.ext.MarkupRecordSummary">
+        SELECT goods_id            as goodsId,
+               user_id             as userId,
+               max(current_bid)    as maxCurrentBid,
+               max(total_number)   as maxTotalNumber,
+               max(shooting_times) as maxShootingTimes,
+               sum(bond)           as sumBond,
+               sum(commission)     as sumCommission,
+               sum(coupons)        as sumCoupons
+        FROM markup_record
+        WHERE cms_status = 1
+          and goods_id = #{goodsId,jdbcType=TINYINT}
+          and user_id = #{userId,jdbcType=TINYINT}
+        GROUP BY goods_id, user_id;
+    </select>
+
+    <select id="selectByGoodsIdAndCurrentBid" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM markup_record
+        WHERE cms_status = 1
+        and goods_id = #{goodsId,jdbcType=TINYINT}
+        and current_bid = #{currentBid,jdbcType=TINYINT};
+    </select>
+
+    <select id="selectByGoodsIdAndBond" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM markup_record
+        WHERE cms_status = 1
+        and bond >0
+        and goods_id = #{goodsId,jdbcType=TINYINT} ;
+    </select>
+
+    <delete id="batDelete">
+        delete
+        from markup_record
+        where goods_id = #{goodsId,jdbcType=TINYINT};
+    </delete>
+
+    <select id="selectShareProfit" resultType="com.example.auctionapp.entity.ext.ShareProfit">
+        select a.id                as id,
+               a.parent_id         as parentId,
+               a.proportion_type   as proportionType,
+               a.proportion        as proportion,
+               a.parent_proportion as parentProportion,
+               sum(mr.commission)  as sumCommission
+        from markup_record mr, customer c, agent a
+        where mr.user_id = c.id and c.agent_id = a.id and cms_status = 1
+            and goods_id = #{goodsId,jdbcType=TINYINT}
+        GROUP BY a.id, a.parent_id, a.proportion_type, a.proportion, a.parent_proportion;
+    </select>
+
+    <select id="getNowMarkupInfo" resultType="java.util.Map">
+        select min(rownum) as rownum, max(current_bid) as currentBid
+        from (
+                 SELECT @rownum := @rownum + 1 AS rownum, t.id, t.current_bid, t.user_id
+                 FROM (SELECT @rownum := 0) r,
+                     (select * from markup_record where goods_id = #{goodsId} order by current_bid desc, id asc) AS t) sort
+        where sort.user_id = #{userId}
+    </select>
+    <select id="getNowMarkupHisInfo" resultType="java.util.Map">
+
+        select min(rownum) as rownum, max(current_bid) as currentBid
+        from (
+                 SELECT @rownum := @rownum + 1 AS rownum, t.id, t.current_bid, t.user_id
+                 FROM (SELECT @rownum := 0) r,
+                     (select * from markup_record_his where goods_id = #{goodsId} order by current_bid desc, id asc) AS
+                     t) sort
+        where sort.user_id = #{userId}
+    </select>
+</mapper>

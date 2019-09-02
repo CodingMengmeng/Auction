@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.GoodsOrderMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.GoodsOrder">
+        <id column="id" property="id"/>
+        <result column="customer_id" property="customerId"/>
+        <result column="order_number" property="orderNumber"/>
+        <result column="transaction_number" property="transactionNumber"/>
+        <result column="payment_time" property="paymentTime"/>
+        <result column="goods_id" property="goodsId"/>
+        <result column="bond" property="bond"/>
+        <result column="bond_channel" property="bondChannel"/>
+        <result column="total_number" property="totalNumber"/>
+        <result column="total_number_all" property="totalNumberAll"/>
+        <result column="reference_commission_all" property="referenceCommissionAll"/>
+        <result column="reference_commission" property="referenceCommission"/>
+        <result column="preferential_amount" property="preferentialAmount"/>
+        <result column="actual_payment" property="actualPayment"/>
+        <result column="tail_amount" property="tailAmount"/>
+        <result column="tail_amount_channel" property="tailAmountChannel"/>
+        <result column="logistics_info" property="logisticsInfo"/>
+        <result column="address_id" property="addressId"/>
+        <result column="status" property="status"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, customer_id, order_number, transaction_number, payment_time, goods_id, bond, bond_channel, total_number, total_number_all, reference_commission_all, reference_commission, preferential_amount, actual_payment, tail_amount, tail_amount_channel, logistics_info, address_id, status, remark, create_time, update_time, version
+    </sql>
+
+
+    <select id="selectCustomerOrderInfo" resultType="map">
+
+        SELECT
+        ord.id,
+        ord.order_number AS orderNumber,
+        ord.customer_id,
+        ord.transaction_number AS transactionNumber,
+        ord.payment_time AS paymentTime,
+        ord.goods_id,
+        ord.bond,
+        ord.bond_channel AS bondChannel,
+        ord.total_number AS totalNumber,
+        ord.total_number_all AS totalNumberAll,
+        ord.reference_commission_all AS referenceCommissionAll,
+        ord.reference_commission AS referenceCommission,
+        ord.preferential_amount AS preferentialAmount,
+        ord.actual_payment AS actualPayment,
+        ord.tail_amount AS tailAmount,
+        ord.tail_amount_channel AS tailAmountChannel,
+        ord.logistics_info AS logisticsInfo,
+        ord.status,
+        ord.remark,
+        ord.address_id AS addressId,
+        ord.create_time AS createTime,
+        ord.resell_size AS resellSize,
+        ag.goods_price AS goodsPrice,
+        ag.goods_name AS goodsName,
+        org.name,
+        img.url AS imgUrl
+        FROM
+        goods_order ord
+        INNER JOIN auction_goods ag
+        ON ord.goods_id = ag.id
+        INNER JOIN customer cu
+        ON cu.id = ord.customer_id
+        INNER JOIN organizer org
+        ON org.id = ag.organizer_id
+        left JOIN (select * from images i where i.type=1  GROUP BY i.subject_id)  img
+        ON img.subject_id = ord.goods_id
+        WHERE ord.customer_id = #{customerId}
+        <if test="status != null ">
+            AND ord.status =#{status}
+        </if>
+        order by ord.id desc
+    </select>
+
+    <select id="selectByOrderNumber" resultType="com.example.auctionapp.entity.GoodsOrder">
+        select
+        <include refid="Base_Column_List"/>
+        from goods_order
+        where order_number = #{orderNumber,jdbcType=TINYINT}
+    </select>
+</mapper>
