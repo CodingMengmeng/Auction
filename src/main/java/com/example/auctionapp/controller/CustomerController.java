@@ -570,6 +570,7 @@ public class CustomerController {
     @WebLog("拍卖值表增加或更新记录")
     @PostMapping("updateOrInsertAuctionValueData")
     public Result updateOrInsertAuctionValueDataController(@RequestHeader("userId") Integer subjectId, @RequestBody BidInfoVo bidInfoVo){
+        log.info(bidInfoVo.toString());
         String resultInfo = customerService.updateOrInsertAuctionValueDataProxy(subjectId,bidInfoVo);
         return Result.success(resultInfo);
     }

@@ -23,6 +23,7 @@ import com.example.auctionapp.vo.CustomerDataVo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -699,14 +700,20 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
     private String updateOrInsertAuctionValueData(BidInfoVo bidInfoVo){
         AuctionValue auctionValueVo = auctionValueMapper.selectAuctionValueInfoById(bidInfoVo.getCustomerId(),bidInfoVo.getGoodsId());
         if(auctionValueVo == null){
+            auctionValueVo = new AuctionValue();
             auctionValueVo.setCustomerId(bidInfoVo.getCustomerId());
             auctionValueVo.setGoodsId(bidInfoVo.getGoodsId());
-            auctionValueVo.setCustomerValue(bidInfoVo.getTotalAuctionValue());
+            //计算拍卖值
+            auctionValueVo.setCustomerValue(CalcUtils.calcAuctionValue(
+                    bidInfoVo.getActualPayBeans(),
+                    CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans()),
+                    new BigDecimal("1.00")
+            ));
             auctionValueVo.setContributeBadgeValue(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans()));
             auctionValueVo.setBid(bidInfoVo.getBidPrice());
             auctionValueVo.setNum(1);
             auctionValueVo.setConsumeBeans(bidInfoVo.getActualPayBeans());
-            auctionValueVo.setConsumeGive(bidInfoVo.getMortgageFreeBean());
+            auctionValueVo.setConsumeGive(Optional.ofNullable(bidInfoVo.getMortgageFreeBean()).orElse(new BigDecimal("0.00")));
             auctionValueVo.setCreateTime(LocalDateTime.now());
             auctionValueVo.setUpdateTime(LocalDateTime.now());
             auctionValueVo.setVersion(1);
@@ -714,18 +721,20 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
             return "新增成功";
         }else{
             AuctionValue auctionValuePo = new AuctionValue();
-            try {
-                PropertyUtils.copyProperties(auctionValuePo,auctionValueVo);
-            } catch (Exception e) {
-                log.error("拷贝对象失败。");
-                e.printStackTrace();
-            }
-            auctionValuePo.setCustomerValue(auctionValueVo.getCustomerValue().add(bidInfoVo.getTotalAuctionValue()));
+
+            BeanUtils.copyProperties(auctionValueVo,auctionValuePo);
+            //拍卖值累加
+            auctionValuePo.setCustomerValue(auctionValueVo.getCustomerValue().add(
+                    CalcUtils.calcAuctionValue(
+                            bidInfoVo.getActualPayBeans(),
+                            CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans()),
+                            new BigDecimal("1.00")
+            )));
             auctionValuePo.setContributeBadgeValue(auctionValueVo.getContributeBadgeValue().add(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans())));
             auctionValuePo.setBid(bidInfoVo.getBidPrice().compareTo(auctionValueVo.getBid()) > 0 ? bidInfoVo.getBidPrice() : auctionValueVo.getBid());
             auctionValuePo.setNum(auctionValueVo.getNum().intValue() + 1);
             auctionValuePo.setConsumeBeans(auctionValueVo.getConsumeBeans().add(bidInfoVo.getActualPayBeans()));
-            auctionValuePo.setConsumeGive(auctionValueVo.getConsumeGive().add(Optional.ofNullable(bidInfoVo.getMortgageFreeBean()).orElse(new BigDecimal("0"))));
+            auctionValuePo.setConsumeGive(auctionValueVo.getConsumeGive().add(Optional.ofNullable(bidInfoVo.getMortgageFreeBean()).orElse(new BigDecimal("0.00"))));
             auctionValuePo.setUpdateTime(LocalDateTime.now());
             auctionValueMapper.updateAuctionValueData(auctionValuePo);
             return "更新成功";

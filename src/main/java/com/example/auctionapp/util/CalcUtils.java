@@ -156,7 +156,7 @@ public class CalcUtils {
         if(commissionValue.compareTo(ZERO) <= 0
                 || ctrbBadgeCoefficient.compareTo(BADGE_COEFFICIENT_BASIC) < 0
                 || friendBadgeCoefficient.compareTo(BADGE_COEFFICIENT_BASIC) < 0
-                || friendAsstValue.compareTo(ZERO) <= 0){
+                || friendAsstValue.compareTo(ZERO) < 0){
             log.warn("输入参数有误。");
             return null;
         }
@@ -178,5 +178,20 @@ public class CalcUtils {
             log.info("拍卖值 = " + precisionConvert(auctionValue,UTIL_SCALE));
             return precisionConvert(auctionValue,UTIL_SCALE);
         }
+    }
+
+    /**
+     * @description 根据佣金、贡献徽章系数、好友徽章系数和好友助力值计算拍卖值，其中好友助力值不填时，默认为0.00
+     * @author mengjia
+     * @date 2019/9/7
+     * @param commissionValue   佣金
+     * @param ctrbBadgeCoefficient    贡献徽章系数
+     * @param friendBadgeCoefficient  好友徽章系数
+     * @return java.math.BigDecimal 满足要求时，返回计算结果，精度为2；否则返回null
+     * @throws
+     **/
+    public static BigDecimal calcAuctionValue(BigDecimal commissionValue,BigDecimal ctrbBadgeCoefficient,
+                                              BigDecimal friendBadgeCoefficient){
+        return calcAuctionValue(commissionValue,ctrbBadgeCoefficient,friendBadgeCoefficient,new BigDecimal("0.00"));
     }
 }
