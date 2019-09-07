@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.AuctionValueMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.AuctionValue">
+        <id column="id" property="id" />
+        <id column="customer_id" property="customerId" />
+        <id column="goods_id" property="goodsId" />
+        <id column="customer_value" property="customerValue" />
+        <id column="friend_value" property="friendValue" />
+        <id column="contribute_badge_value" property="contributeBadgeValue" />
+        <id column="friend_badge_value" property="friendBadgeValue" />
+        <id column="bid" property="bid" />
+        <id column="num" property="num" />
+        <id column="consume_beans" property="consumeBeans" />
+        <id column="consume_give" property="consumeGive" />
+        <id column="create_time" property="createTime" />
+        <id column="update_time" property="updateTime" />
+        <id column="version" property="version" />
+    </resultMap>
+    <update id="updateAuctionValueData" parameterType="com.example.auctionapp.entity.AuctionValue">
+        update auction_value set customer_value = #{customerValue},contribute_badge_value = #{contributeBadgeValue},
+                                  bid = #{bid},num = #{num},consume_beans = #{consumeBeans},consume_give = #{consumeGive}
+                                  where customer_id = #{customerId} and goods_id = #{goodsId};
+    </update>
+    <select id="selectAuctionValueInfoById"  resultType="com.example.auctionapp.entity.AuctionValue">
+        SELECT *
+        FROM auction_value
+        WHERE customer_id = #{customerId} and goods_id = #{goodsId};
+    </select>
+</mapper>

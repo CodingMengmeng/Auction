@@ -7,6 +7,7 @@ import com.example.auctionapp.annotation.WebLog;
 import com.example.auctionapp.core.*;
 import com.example.auctionapp.dao.AuctionGoodsMapper;
 import com.example.auctionapp.entity.AuctionGoods;
+import com.example.auctionapp.entity.AuctionValue;
 import com.example.auctionapp.entity.Customer;
 import com.example.auctionapp.entity.ext.CustomerExt;
 import com.example.auctionapp.service.IAuctionGoodsService;
@@ -16,6 +17,7 @@ import com.example.auctionapp.service.IRedisService;
 import com.example.auctionapp.util.CodeUtils;
 import com.example.auctionapp.util.ShortMessageUtil;
 import com.example.auctionapp.vo.BadgeLevelVo;
+import com.example.auctionapp.vo.BidInfoVo;
 import com.example.auctionapp.vo.CustomerDataVo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -546,7 +548,29 @@ public class CustomerController {
     @WebLog("获取用户的徽章信息")
     @PostMapping("updateCustomerctrbBadgeBeans")
     public Result updateCustomerctrbBadgeBeans(@RequestHeader("userId") Integer id){
-        int affectNum = customerService.updateCustomerCtrbBadgeBeansProxy(id);
+        int affectNum = customerService.updateCustomerBadgeBeansProxy(id);
         return Result.success(affectNum);
+    }
+
+    /**
+     * @description 临时新增拍卖值记录接口
+     * @author mengjia
+     * @date 2019/9/7
+     * @param id 用户Id
+     * @return com.example.auctionapp.core.Result<com.example.auctionapp.entity.AuctionValue>
+     * @throws
+     **/
+    @WebLog("拍卖值表增加记录")
+    @PostMapping("insertRecordToAuctionValue")
+    public Result<AuctionValue> insertRecordToAuctionValueController(@RequestHeader("userId") Integer id){
+        AuctionValue auctionValue = customerService.insertRecordToAuctionValue();
+        return Result.success(auctionValue);
+    }
+
+    @WebLog("拍卖值表增加或更新记录")
+    @PostMapping("updateOrInsertAuctionValueData")
+    public Result updateOrInsertAuctionValueDataController(@RequestHeader("userId") Integer subjectId, @RequestBody BidInfoVo bidInfoVo){
+        String resultInfo = customerService.updateOrInsertAuctionValueDataProxy(subjectId,bidInfoVo);
+        return Result.success(resultInfo);
     }
 }

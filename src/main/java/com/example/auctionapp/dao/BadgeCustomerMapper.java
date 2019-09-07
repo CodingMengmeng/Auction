@@ -5,8 +5,8 @@ import com.example.auctionapp.vo.BadgeCustomerVo;
 import org.apache.ibatis.annotations.Param;
 import tk.mybatis.mapper.common.BaseMapper;
 
-import javax.validation.constraints.Past;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @description 用户徽章信息接口
@@ -32,4 +32,11 @@ public interface BadgeCustomerMapper extends BaseMapper<BadgeCustomer>{
      * @return
      */
     Integer updateCustomerctrbBadgeBeans( BadgeCustomer badgeCustomer);
+    /**
+     * 根据徽章类型和等级查询徽章的等级ID
+     * @param badgeId 徽章类型
+     * @Param level 徽章等级
+     * @return
+     */
+    Map<String,Object> selectBadgeLevelId(@Param("badgeId")Integer badgeId, @Param("level")Integer level);
 }

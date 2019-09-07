@@ -21,6 +21,8 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
 public class BadgeCustomer implements Serializable {
+
+    private static final long serialVersionUID = 1L;
     /**
      * 徽章等级编号
      */

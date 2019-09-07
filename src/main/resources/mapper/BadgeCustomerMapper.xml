@@ -24,4 +24,26 @@
         LEFT JOIN badge a ON l.badge_id = a.id
         WHERE c.customer_id = #{id}
     </select>
+
+    <select id="selectBadgeInfosById" resultType="com.example.auctionapp.vo.BadgeCustomerVo">
+        SELECT
+        c.customer_id,
+        c.emblem_id,
+        a.`id`,
+        l.`level`,
+        a.`name`,
+        c.`beans`
+        FROM badge_customer c
+        LEFT JOIN badge_level l ON c.emblem_id = l.id
+        LEFT JOIN badge a ON l.badge_id = a.id
+        WHERE c.customer_id = #{id}
+    </select>
+
+    <select id="selectBadgeLevelId" resultType="map">
+        SELECT
+        id
+        FROM pat_sell.badge_level
+        where badge_id = #{badgeId}
+        AND level = #{level};
+    </select>
 </mapper>

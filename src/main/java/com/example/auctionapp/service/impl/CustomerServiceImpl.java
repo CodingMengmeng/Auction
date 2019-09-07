@@ -7,12 +7,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.auctionapp.core.*;
 import com.example.auctionapp.dao.AccountMapper;
+import com.example.auctionapp.dao.AuctionValueMapper;
 import com.example.auctionapp.dao.BadgeCustomerMapper;
 import com.example.auctionapp.dao.CustomerMapper;
-import com.example.auctionapp.entity.Account;
-import com.example.auctionapp.entity.AuctionGoods;
-import com.example.auctionapp.entity.BadgeCustomer;
-import com.example.auctionapp.entity.Customer;
+import com.example.auctionapp.entity.*;
 import com.example.auctionapp.entity.ext.CustomerExt;
 import com.example.auctionapp.service.ICouponsService;
 import com.example.auctionapp.service.ICustomerService;
@@ -20,8 +18,10 @@ import com.example.auctionapp.service.IRedisService;
 import com.example.auctionapp.util.*;
 import com.example.auctionapp.vo.BadgeCustomerVo;
 import com.example.auctionapp.vo.BadgeLevelVo;
+import com.example.auctionapp.vo.BidInfoVo;
 import com.example.auctionapp.vo.CustomerDataVo;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -29,8 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+
 
 /**
  * <p>
@@ -60,6 +62,9 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
 
     @Resource
     private BadgeCustomerMapper badgeCustomerMapper;
+
+    @Resource
+    private AuctionValueMapper auctionValueMapper;
 
     private List<String> list = new ArrayList<String>();
 
@@ -634,7 +639,18 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
     public Map<Integer,List<Object>> getCustomerBadgeInfosProxy(int subjectId){
         return getCustomerBadgeInfos(subjectId);
     }
-    private int updateCustomerctrbBadgeBeans(int emblemId,int subjectId,
+    /**
+     * @description 更新badge_customer表中的已消费拍豆
+     * @author mengjia
+     * @date 2019/9/2
+     * @param emblemId 徽章等级编号
+     * @param subjectId 用户ID
+     * @param payBeans 本次消费的拍豆
+     * @param currentBeans 当前已消费的拍豆
+     * @return int 返回匹配的条数
+     * @throws
+     **/
+    private int updateCustomerBadgeBeans(int emblemId,int subjectId,
                                               BigDecimal payBeans,BigDecimal currentBeans){
         BigDecimal newBeans = currentBeans.add(payBeans);
         BadgeCustomer badgeCustomer = new BadgeCustomer();
@@ -649,12 +665,99 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
             return 0;
         }
     }
+
+    /**
+     * @description 使用徽章类型ID和徽章等级查询出徽章等级编号，与用户ID和已支付拍豆
+     * 组成badge_customer表中的记录。
+     * @author mengjia
+     * @date 2019/9/4
+     * @param badgeId   徽章类型ID
+     * @param badgeLevel    徽章等级
+     * @param subjectId     用户ID
+     * @param payBeans  已支付拍豆
+     * @return void
+     * @throws
+     **/
+    private void insertCustomerBadgeBeans(int badgeId,int badgeLevel,
+                                                int subjectId,BigDecimal payBeans){
+        Map<String, Object> resultMap = badgeCustomerMapper.selectBadgeLevelId(badgeId,badgeLevel);
+        BadgeCustomer badgeCustomer = new BadgeCustomer();
+        badgeCustomer.setEmblemId((Integer)resultMap.get("id"));
+        badgeCustomer.setCustomerId(subjectId);
+        badgeCustomer.setBeans(payBeans);
+        badgeCustomerMapper.insert(badgeCustomer);
+    }
     @Override
-    public int updateCustomerCtrbBadgeBeansProxy(int subjectId){
+    public int updateCustomerBadgeBeansProxy(int subjectId){
         Map<Integer,List<Object>> customerBadgeInfo = getCustomerBadgeInfos(subjectId);
         int emblemId = (Integer) customerBadgeInfo.get(2).get(0);
         BigDecimal currentBeans = (BigDecimal) customerBadgeInfo.get(2).get(2);
         BigDecimal payBeans = new BigDecimal("50");
-        return updateCustomerctrbBadgeBeans(emblemId,subjectId,currentBeans,payBeans);
+        return updateCustomerBadgeBeans(emblemId,subjectId,currentBeans,payBeans);
+    }
+
+    private String updateOrInsertAuctionValueData(BidInfoVo bidInfoVo){
+        AuctionValue auctionValueVo = auctionValueMapper.selectAuctionValueInfoById(bidInfoVo.getCustomerId(),bidInfoVo.getGoodsId());
+        if(auctionValueVo == null){
+            auctionValueVo.setCustomerId(bidInfoVo.getCustomerId());
+            auctionValueVo.setGoodsId(bidInfoVo.getGoodsId());
+            auctionValueVo.setCustomerValue(bidInfoVo.getTotalAuctionValue());
+            auctionValueVo.setContributeBadgeValue(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans()));
+            auctionValueVo.setBid(bidInfoVo.getBidPrice());
+            auctionValueVo.setNum(1);
+            auctionValueVo.setConsumeBeans(bidInfoVo.getActualPayBeans());
+            auctionValueVo.setConsumeGive(bidInfoVo.getMortgageFreeBean());
+            auctionValueVo.setCreateTime(LocalDateTime.now());
+            auctionValueVo.setUpdateTime(LocalDateTime.now());
+            auctionValueVo.setVersion(1);
+            auctionValueMapper.insert(auctionValueVo);
+            return "新增成功";
+        }else{
+            AuctionValue auctionValuePo = new AuctionValue();
+            try {
+                PropertyUtils.copyProperties(auctionValuePo,auctionValueVo);
+            } catch (Exception e) {
+                log.error("拷贝对象失败。");
+                e.printStackTrace();
+            }
+            auctionValuePo.setCustomerValue(auctionValueVo.getCustomerValue().add(bidInfoVo.getTotalAuctionValue()));
+            auctionValuePo.setContributeBadgeValue(auctionValueVo.getContributeBadgeValue().add(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans())));
+            auctionValuePo.setBid(bidInfoVo.getBidPrice().compareTo(auctionValueVo.getBid()) > 0 ? bidInfoVo.getBidPrice() : auctionValueVo.getBid());
+            auctionValuePo.setNum(auctionValueVo.getNum().intValue() + 1);
+            auctionValuePo.setConsumeBeans(auctionValueVo.getConsumeBeans().add(bidInfoVo.getActualPayBeans()));
+            auctionValuePo.setConsumeGive(auctionValueVo.getConsumeGive().add(Optional.ofNullable(bidInfoVo.getMortgageFreeBean()).orElse(new BigDecimal("0"))));
+            auctionValuePo.setUpdateTime(LocalDateTime.now());
+            auctionValueMapper.updateAuctionValueData(auctionValuePo);
+            return "更新成功";
+
+        }
+
+    }
+    @Override
+    public AuctionValue insertRecordToAuctionValue(){
+        AuctionValue auctionValue = new AuctionValue();
+        auctionValue.setCustomerId(2);
+        auctionValue.setGoodsId(1);
+        auctionValue.setCustomerValue(new BigDecimal("128.00"));
+        auctionValue.setContributeBadgeValue(new BigDecimal("1.01"));
+        auctionValue.setBid(new BigDecimal("3000.00"));
+        auctionValue.setNum(1);
+        auctionValue.setConsumeBeans(new BigDecimal("120.00"));
+        auctionValue.setConsumeBeans(new BigDecimal("30.00"));
+        auctionValue.setCreateTime(LocalDateTime.now());
+        auctionValue.setUpdateTime(LocalDateTime.now());
+        auctionValue.setVersion(1);
+        log.info(auctionValue.toString());
+        int result = auctionValueMapper.insert(auctionValue);
+        log.info("result = " + result);
+        AuctionValue auctionValue1 = auctionValueMapper.selectAuctionValueInfoById(2,1);
+        log.info(auctionValue1.toString());
+        return auctionValue1;
+
+    }
+
+    @Override
+    public String updateOrInsertAuctionValueDataProxy(Integer subjectId,BidInfoVo bidInfoVo){
+        return updateOrInsertAuctionValueData(bidInfoVo);
     }
 }

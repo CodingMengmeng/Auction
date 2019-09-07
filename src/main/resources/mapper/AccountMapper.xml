@@ -37,7 +37,7 @@
         update account set balance = #{balance},frozen = #{frozen} where id = #{id}
     </update>
 
-    <select id="selectBalanceAndWithBeansById" resultType="map" parameterType="integer">
+    <select id="selectBalanceAndWithBeansById" resultType="map" parameterType="Integer">
         SELECT balance,with_beans FROM account
         WHERE subject_id = #{subjectId};
     </select>

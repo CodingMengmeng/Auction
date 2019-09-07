@@ -6,9 +6,11 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.auctionapp.core.Result;
 import com.example.auctionapp.core.SuperControl;
 import com.example.auctionapp.core.TokenModel;
+import com.example.auctionapp.entity.AuctionValue;
 import com.example.auctionapp.entity.Customer;
 import com.example.auctionapp.entity.ext.CustomerExt;
 import com.example.auctionapp.vo.BadgeLevelVo;
+import com.example.auctionapp.vo.BidInfoVo;
 import com.example.auctionapp.vo.CustomerDataVo;
 
 import java.math.BigDecimal;
@@ -195,5 +197,7 @@ public interface ICustomerService extends IService<Customer> {
 
     boolean isBidSuccessProxy(int subjectId, BigDecimal askedPrice, BigDecimal proportion);
     Map<Integer,List<Object>> getCustomerBadgeInfosProxy(int subjectId);
-    int updateCustomerCtrbBadgeBeansProxy(int subjectId);
+    int updateCustomerBadgeBeansProxy(int subjectId);
+    AuctionValue insertRecordToAuctionValue();
+    String updateOrInsertAuctionValueDataProxy(Integer subjectId,BidInfoVo bidInfoVo);
 }
