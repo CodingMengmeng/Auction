@@ -19,7 +19,7 @@ import java.math.BigDecimal;
 @EqualsAndHashCode(callSuper = false)
 @Accessors(chain = true)
 @ApiModel(value="拍卖出价接口请求参数集",description="拍卖出价接口请求参数对象")
-public class BidInfoVo {
+public class Vo {
     @ApiModelProperty(value="拍品编号")
     private Integer goodsId;
 
