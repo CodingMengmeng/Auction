@@ -2,10 +2,12 @@ package com.example.auctionapp.service.impl;
 
 import com.example.auctionapp.dao.DealMapper;
 import com.example.auctionapp.service.IDealService;
+import com.example.auctionapp.vo.DealConditionVo;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -15,14 +17,14 @@ public class DealServiceImpl implements IDealService {
     /*
      * 根据拍品id查询排中相关参数
      * */
-    public Map<String, Object> getGoodsDealParamById(String auctionGoodsId){
+    public Map<String, Object> getGoodsDealParamById(int auctionGoodsId){
         System.out.println("service:"+auctionGoodsId);
         return dealMapper.selectAuctionMinParam(auctionGoodsId);
     }
     /*
      * 是否拍中函数
      * */
-    public boolean isConclued(String auctionGoodsId,String customerId){
+    public boolean isConclued(int auctionGoodsId,int customerId){
         //1、参拍人数>=最低参拍人数（拍品表）
         int ActualPeopleNum =  dealMapper.selectActualPeopleNum(auctionGoodsId);
         Map<String, Object> auctionMinParam = dealMapper.selectAuctionMinParam(auctionGoodsId);
@@ -40,8 +42,20 @@ public class DealServiceImpl implements IDealService {
             }
             //3、两个利润公式
             //利润公式1：出价+总排豆>成本+利润
-
-
+            List<DealConditionVo> dealConditionVo = dealMapper.selectDealInfoById(auctionGoodsId);
+            BigDecimal profit=null;
+            BigDecimal cost=null;
+            BigDecimal beans_pond=null;
+            if(dealConditionVo!=null){
+                profit = dealConditionVo.get(0).getProfit();
+                cost = dealConditionVo.get(0).getCost();
+                beans_pond = dealConditionVo.get(0).getBeans_pond();
+            }
+            if(maxBid.add(beans_pond).compareTo(profit.add(cost))<0){
+                return false;
+            }
+            //利润公式2  总排豆-返佣>利润。
+            
         }else{
 
         }
