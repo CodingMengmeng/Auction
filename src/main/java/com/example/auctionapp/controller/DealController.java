@@ -33,4 +33,10 @@ public class DealController {
 //    public Result getGoodsDealParamById(@RequestParam(value=) String auctionGoodsId) {
 //        return Result.success(iDealService.getGoodsDealParamById(auctionGoodsId));
 //    }
+
+
+    @RequestMapping("/getGoodsIfDealById")
+    public Result getGoodsIfDealById(@RequestHeader("auctionGoodsId")  String auctionGoodsId) {
+        return Result.success(iDealService.getdealConditionInfo(auctionGoodsId));
+    }
 }

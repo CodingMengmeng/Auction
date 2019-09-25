@@ -17,14 +17,14 @@ public class DealServiceImpl implements IDealService {
     /*
      * 根据拍品id查询排中相关参数
      * */
-    public Map<String, Object> getGoodsDealParamById(int auctionGoodsId){
+    public Map<String, Object> getGoodsDealParamById(String auctionGoodsId){
         System.out.println("service:"+auctionGoodsId);
         return dealMapper.selectAuctionMinParam(auctionGoodsId);
     }
     /*
      * 是否拍中函数
      * */
-    public boolean isConclued(int auctionGoodsId,int customerId){
+    public boolean isConclued(String auctionGoodsId,int customerId){
         //1、参拍人数>=最低参拍人数（拍品表）
         int ActualPeopleNum =  dealMapper.selectActualPeopleNum(auctionGoodsId);
         Map<String, Object> auctionMinParam = dealMapper.selectAuctionMinParam(auctionGoodsId);
@@ -55,10 +55,18 @@ public class DealServiceImpl implements IDealService {
                 return false;
             }
             //利润公式2  总排豆-返佣>利润。
-            
-        }else{
 
+        }else{
+           return false;
         }
+        //应该抛异常
+        return false;
     }
 
+
+   public List<DealConditionVo> getdealConditionInfo(String auctionGoodsId) {
+
+       return dealMapper.selectDealInfoById(auctionGoodsId);
+
+    }
 }
