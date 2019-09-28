@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.example.auctionapp.core.Paging;
 import com.example.auctionapp.entity.Banner;
 import com.example.auctionapp.vo.AuctionGoodsVO;
+import com.example.auctionapp.vo.BidInfoVo;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -148,4 +149,5 @@ public interface IAuctionGoodsService {
 
     List<Map<String, Object>> getRandomAuctionGoods(List<Integer> list);
 
+    Result processBid(BidInfoVo bidInfoVo);
 }

@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import java.io.Serializable;
 import java.util.Date;
 
+import io.swagger.models.auth.In;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
@@ -212,6 +213,18 @@ public class TransLog implements Serializable {
 
     @TableField(exist = false)
     private String password;
+
+    /**
+     * 赠豆
+     **/
+    @TableField("with_beans")
+    private BigDecimal withBeans;
+
+    /**
+     * 支付类型
+     **/
+    @TableField("channel_type")
+    private Integer channelType;
 
 
 }

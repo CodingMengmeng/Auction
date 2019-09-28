@@ -12,6 +12,7 @@ import com.example.auctionapp.core.ResultGenerator;
 import com.example.auctionapp.entity.*;
 import com.example.auctionapp.service.*;
 import com.example.auctionapp.vo.AuctionGoodsVO;
+import com.example.auctionapp.vo.BidInfoVo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -359,6 +360,12 @@ public class AuctionGoodsController {
             return Result.success(nowMarkupInfo);
         }
 
+    }
+
+    @PostMapping("/bid")
+    public Result bid(@RequestHeader("userId") Integer subjectId, @RequestBody BidInfoVo bidInfoVo){
+        log.info(bidInfoVo.toString());
+        return iAuctionGoodsService.processBid(bidInfoVo);
     }
 
 }
