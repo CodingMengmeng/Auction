@@ -23,4 +23,7 @@ public interface DealMapper extends BaseMapper<AuctionGoods> {
 
    List<DealConditionVo> selectDealInfoById(@Param("auctionGoodsId") String auctionGoodsId);
 
+   BigDecimal selectTotalPayedBeans(@Param("auctionGoodsId") String auctionGoodsId,@Param("customer_id") int customer_id);
+
+
 }

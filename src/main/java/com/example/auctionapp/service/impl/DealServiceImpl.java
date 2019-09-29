@@ -23,8 +23,10 @@ public class DealServiceImpl implements IDealService {
     }
     /*
      * 是否拍中函数
+     * @auctionGoodsId 拍品Id
+     * 返回true/false
      * */
-    public boolean isConclued(String auctionGoodsId,int customerId){
+    public boolean isDealConclued(String auctionGoodsId) throws Exception{
         //1、参拍人数>=最低参拍人数（拍品表）
         int ActualPeopleNum =  dealMapper.selectActualPeopleNum(auctionGoodsId);
         Map<String, Object> auctionMinParam = dealMapper.selectAuctionMinParam(auctionGoodsId);
@@ -34,6 +36,7 @@ public class DealServiceImpl implements IDealService {
                 return false;
             }
            //2、出价在成交区间内
+             //拍卖值排名最高的用户的出价(所有出价之和)>=最小成交价
             int firsrRankingUserId = dealMapper.selectRankFirstUserId(auctionGoodsId);
             BigDecimal  maxBid = dealMapper.selectMaxBid(auctionGoodsId,firsrRankingUserId);
             BigDecimal min_section  = (BigDecimal)auctionMinParam.get("min_section");
@@ -41,26 +44,32 @@ public class DealServiceImpl implements IDealService {
                 return false;
             }
             //3、两个利润公式
-            //利润公式1：出价+总排豆>成本+利润
+            //3.1利润公式1：出价+总排豆>=成本+利润
             List<DealConditionVo> dealConditionVo = dealMapper.selectDealInfoById(auctionGoodsId);
-            BigDecimal profit=null;
-            BigDecimal cost=null;
-            BigDecimal beans_pond=null;
+            BigDecimal profit=null;//利润
+            BigDecimal cost=null;//成本
+            BigDecimal beans_pond=null;//总拍豆
             if(dealConditionVo!=null){
                 profit = dealConditionVo.get(0).getProfit();
                 cost = dealConditionVo.get(0).getCost();
                 beans_pond = dealConditionVo.get(0).getBeans_pond();
+            }else{
+                throw new Exception("该商品拍品表参数为空,商品id为"+auctionGoodsId);
             }
             if(maxBid.add(beans_pond).compareTo(profit.add(cost))<0){
                 return false;
             }
-            //利润公式2  总排豆-返佣>利润。
-
+            //3.2利润公式2  总排豆-返佣>=利润。
+             //查询用户的佣金=支付的排豆*2
+            BigDecimal totalPayedBeans = dealMapper.selectTotalPayedBeans(auctionGoodsId,firsrRankingUserId);
+            if(beans_pond.subtract(totalPayedBeans.multiply(new BigDecimal(Double.valueOf("2")))).compareTo(profit)<0){
+                    return false;
+            }else{
+                return true;
+            }
         }else{
-           return false;
+           throw new Exception("该商品最小成交参数为空,商品id为"+auctionGoodsId);
         }
-        //应该抛异常
-        return false;
     }
 
 

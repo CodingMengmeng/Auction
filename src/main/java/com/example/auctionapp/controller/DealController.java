@@ -28,15 +28,18 @@ public class DealController {
         return Result.success("hello World:"+id);
     }
 
-//    @WebLog("查询拍品详情接口")
-//    @PostMapping("/getGoodsDealParamById")
-//    public Result getGoodsDealParamById(@RequestParam(value=) String auctionGoodsId) {
-//        return Result.success(iDealService.getGoodsDealParamById(auctionGoodsId));
-//    }
-
-
     @RequestMapping("/getGoodsIfDealById")
     public Result getGoodsIfDealById(@RequestHeader("auctionGoodsId")  String auctionGoodsId) {
         return Result.success(iDealService.getdealConditionInfo(auctionGoodsId));
+    }
+
+    @RequestMapping("/getIsDealConcluedById")
+    public Result getIsDealConcluedById(@RequestHeader("auctionGoodsId")  String auctionGoodsId) {
+        try {
+            return Result.success(iDealService.isDealConclued(auctionGoodsId));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
