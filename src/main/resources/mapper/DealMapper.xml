@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.DealMapper">
+    <select id="selectAuctionMinParam" resultType="map">
+        select min_section,min_number_people,ag.number from pat_sell.auction_goods ag where ag.number=#{auctionGoodsId}
+    </select>
+    <select id="selectActualPeopleNum" resultType="map">
+       SELECT count(*) from pat_sell.auction_value av where av.goods_id=#{auctionGoodsId}
+    </select>
+    <select id="selectRankFirstUserId" resultType="map">
+           SELECT rk.customer_id from pat_sell.ranking_list rk where rk.goods_id = #{auctionGoodsId} ORDER BY rk.goods_value desc limit 1
+    </select>
+    <select id="selectMaxBid" resultType="map">
+      select count(current_bid) from pat_sell.markup_record mr where mr.goods_id=#{auctionGoodsId} and mr.user_id=#{customer_id}
+    </select>
+
+    <select id="selectDealInfoById" resultType="com.example.auctionapp.vo.DealConditionVo">
+       select min_section,min_number_people,ag.profit,cost,beans_pond from pat_sell.auction_goods ag where ag.number=#{auctionGoodsId}
+    </select>
+</mapper>
