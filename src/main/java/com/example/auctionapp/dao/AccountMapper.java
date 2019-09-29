@@ -40,4 +40,5 @@ public interface AccountMapper extends BaseMapper<Account> {
     Integer updateBalanceAndFrozenById(Account account);
 
     Map<String,Object> selectBalanceAndWithBeansById(@Param("subjectId") Integer subjectId);
+    Account selectAccountInfoBySubjectId(@Param("subjectId") Integer subjectId);
 }

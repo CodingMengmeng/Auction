@@ -652,13 +652,24 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
      * @throws
      **/
     private int updateCustomerBadgeBeans(int emblemId,int subjectId,
-                                              BigDecimal payBeans,BigDecimal currentBeans){
+                                              BigDecimal payBeans,BigDecimal currentBeans,int emblemType){
         BigDecimal newBeans = currentBeans.add(payBeans);
-        BadgeCustomer badgeCustomer = new BadgeCustomer();
-        badgeCustomer.setEmblemId(emblemId);
-        badgeCustomer.setCustomerId(subjectId);
-        badgeCustomer.setBeans(newBeans);
-        int effectNum = badgeCustomerMapper.updateCustomerctrbBadgeBeans(badgeCustomer);
+        int newEmblemId = 0;
+        //1-好友徽章
+        //2-贡献徽章
+        if(emblemType == 1){
+            newEmblemId = CalcUtils.friendEmblemLevelIdMap.get(CalcUtils.calcFriendBadgeCoefficient(newBeans));
+        }else if(emblemType == 2){
+            newEmblemId = CalcUtils.ctrbEmblemLevelIdMap.get(CalcUtils.calcCtrbBadgeCoefficient(newBeans));
+        }else{
+            return 0;
+        }
+        BadgeCustomerVo badgeCustomerVo = new BadgeCustomerVo();
+        badgeCustomerVo.setEmblemId(emblemId);
+        badgeCustomerVo.setCustomerId(subjectId);
+        badgeCustomerVo.setBeans(newBeans);
+        badgeCustomerVo.setNewEmblemId(newEmblemId);
+        int effectNum = badgeCustomerMapper.updateCustomerctrbBadgeBeans(badgeCustomerVo);
         if(effectNum != 0){
             log.info("更新" + effectNum + "条数据");
             return effectNum;
@@ -691,10 +702,11 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
     @Override
     public int updateCustomerBadgeBeansProxy(int subjectId){
         Map<Integer,List<Object>> customerBadgeInfo = getCustomerBadgeInfos(subjectId);
+        log.info(customerBadgeInfo.toString());
         int emblemId = (Integer) customerBadgeInfo.get(2).get(0);
         BigDecimal currentBeans = (BigDecimal) customerBadgeInfo.get(2).get(2);
         BigDecimal payBeans = new BigDecimal("50");
-        return updateCustomerBadgeBeans(emblemId,subjectId,currentBeans,payBeans);
+        return updateCustomerBadgeBeans(emblemId,subjectId,currentBeans,payBeans,2);
     }
 
     private String updateOrInsertAuctionValueData(BidInfoVo bidInfoVo){

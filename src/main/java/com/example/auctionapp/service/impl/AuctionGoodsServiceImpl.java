@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.auctionapp.core.Paging;
+import com.example.auctionapp.core.ProjectConstant;
 import com.example.auctionapp.core.Result;
 import com.example.auctionapp.core.ResultGenerator;
 import com.example.auctionapp.dao.AuctionGoodsMapper;
@@ -16,19 +17,26 @@ import com.example.auctionapp.entity.BrowseRecord;
 import com.example.auctionapp.entity.FollowRecord;
 import com.example.auctionapp.dao.*;
 import com.example.auctionapp.entity.*;
+import com.example.auctionapp.entity.ext.MarkupRecordSummary;
 import com.example.auctionapp.service.IAuctionGoodsService;
 import com.example.auctionapp.service.IMarkupRecordHisService;
 import com.example.auctionapp.service.IMarkupRecordService;
+import com.example.auctionapp.util.CalcUtils;
 import com.example.auctionapp.util.DateTimeUtil;
 import com.example.auctionapp.vo.AuctionGoodsVO;
+import com.example.auctionapp.vo.BadgeCustomerVo;
+import com.example.auctionapp.vo.BidInfoVo;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import com.example.auctionapp.entity.AuctionGoods;
 import org.springframework.transaction.annotation.Transactional;
 
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 
 
@@ -70,6 +78,12 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
     MarkupRecordMapper markupRecordMapper;
     @Resource
     TransLogMapper transLogMapper;
+
+    @Resource
+    private AuctionValueMapper auctionValueMapper;
+
+    @Resource
+    private BadgeCustomerMapper badgeCustomerMapper;
 
     /**
      * 查询正在拍卖的拍品
@@ -287,5 +301,380 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
     @Override
     public List<Map<String, Object>> getRandomAuctionGoods(List<Integer> list) {
         return auctionGoodsMapper.selectRandomAuctionGoods(list);
+    }
+
+    /**
+     * @description 判断出价是否成功，私有函数
+     * @author mengjia
+     * @date 2019/9/18
+     * @param subjectId 用户id，根据请求Header拿到
+     * @param bidPrice    出价，根据请求参数拿到
+     * @param proportion    比例，当前为5%
+     * @return boolean
+     * @throws
+     **/
+    private boolean isBidSuccess(int subjectId, BigDecimal bidPrice, BigDecimal proportion ){
+        BigDecimal commission = bidPrice.multiply(proportion);
+        Map<String,Object> result = accountMapper.selectBalanceAndWithBeansById(subjectId);
+        BigDecimal balance;
+        BigDecimal withBeans;
+        if( result.get("balance") == null){
+            balance = CalcUtils.ZERO;
+        }else{
+            balance = (BigDecimal) result.get("balance");
+        }
+        if(result.get("with_beans") == null){
+            withBeans = CalcUtils.ZERO;
+        }else{
+            withBeans = (BigDecimal) result.get("with_beans");
+        }
+        log.info("balance:" + balance);
+        log.info("withBeans:" + withBeans);
+        if((balance.add(withBeans)).compareTo(commission) > -1){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    /**
+     * @description 获取用户徽章信息，包括徽章类型、等级编号、等级、豆量
+     * @author mengjia
+     * @date 2019/9/18
+     * @param subjectId 用户id
+     * @return java.util.List<com.example.auctionapp.vo.BadgeCustomerVo>
+     * @throws
+     **/
+    private List<BadgeCustomerVo> getCustomerBadgeInfos(int subjectId){
+        return badgeCustomerMapper.selectBadgeInfosById(subjectId);
+    }
+    /**
+     * @description 拍卖值表更新或新增记录
+     * @author mengjia
+     * @date 2019/9/18
+     * @param bidInfoVo 出价信息
+     * @return java.lang.String
+     * @throws
+     **/
+    private String updateOrInsertAuctionValueData(BidInfoVo bidInfoVo,List<BadgeCustomerVo> badgeCustomerInfos){
+        //根据用户id和拍品id获取拍卖值信息
+        AuctionValue auctionValueVo = auctionValueMapper.selectAuctionValueInfoById(bidInfoVo.getCustomerId(),bidInfoVo.getGoodsId());
+        //初始化贡献徽章系数和好友徽章系数为1.00
+        BigDecimal ctrbBadgeCoefficient = CalcUtils.BADGE_COEFFICIENT_BASIC;
+        BigDecimal friendBadgeCoefficient = CalcUtils.BADGE_COEFFICIENT_BASIC;
+        if(badgeCustomerInfos != null && badgeCustomerInfos.size() > 0) {
+            for(BadgeCustomerVo badgeCustomerInfo : badgeCustomerInfos){
+                //贡献徽章系数和好友徽章系数赋值
+                if(badgeCustomerInfo.getName() == "贡献徽章"){
+                    ctrbBadgeCoefficient = CalcUtils.calcCtrbBadgeCoefficient(badgeCustomerInfo.getBeans());
+                }else if(badgeCustomerInfo.getName() == "好友徽章"){
+                    friendBadgeCoefficient = CalcUtils.calcFriendBadgeCoefficient(badgeCustomerInfo.getBeans());
+                }else{
+                    log.info("Other types of badges,do nothing.");
+                }
+            }
+        }
+        //拍卖值表中无记录，则新增；否则更新拍卖值记录
+        if(auctionValueVo == null){
+            auctionValueVo = new AuctionValue();
+            //用户编号
+            auctionValueVo.setCustomerId(bidInfoVo.getCustomerId());
+            //拍品编号
+            auctionValueVo.setGoodsId(bidInfoVo.getGoodsId());
+            //拍卖值
+            auctionValueVo.setCustomerValue(CalcUtils.calcAuctionValue(
+                    bidInfoVo.getActualPayBeans(),
+                    ctrbBadgeCoefficient,
+                    friendBadgeCoefficient
+            ));
+            //记录每一次出价贡献徽章的加成
+            auctionValueVo.setContributeBadgeValue(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans()));
+            //最高出价
+            auctionValueVo.setBid(bidInfoVo.getBidPrice());
+            //出价次数
+            auctionValueVo.setNum(1);
+            //消耗总拍豆，若本次未消耗拍豆，则存入0.00
+            auctionValueVo.setConsumeBeans(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
+            //消耗总赠豆，若本次未消耗赠豆，则存入0.00
+            auctionValueVo.setConsumeGive(Optional.ofNullable(bidInfoVo.getMortgageFreeBean()).orElse(new BigDecimal("0.00")));
+            //创建时间
+            auctionValueVo.setCreateTime(LocalDateTime.now());
+            //更新时间
+            auctionValueVo.setUpdateTime(LocalDateTime.now());
+            //乐观锁，为1
+            auctionValueVo.setVersion(1);
+            auctionValueMapper.insert(auctionValueVo);
+            return "新增成功";
+        }else{
+            AuctionValue auctionValuePo = new AuctionValue();
+            //克隆拍卖值实体bean
+            BeanUtils.copyProperties(auctionValueVo,auctionValuePo);
+            //拍卖值累加
+            auctionValuePo.setCustomerValue(auctionValueVo.getCustomerValue().add(
+                    CalcUtils.calcAuctionValue(
+                            bidInfoVo.getActualPayBeans(),
+                            ctrbBadgeCoefficient,
+                            friendBadgeCoefficient
+                    )));
+            //记录每一次出价贡献徽章的加成
+            auctionValuePo.setContributeBadgeValue(auctionValueVo.getContributeBadgeValue().add(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans())));
+            //最高出价，当前出价与原出价相比，若大于则更新
+            auctionValuePo.setBid(bidInfoVo.getBidPrice().compareTo(auctionValueVo.getBid()) > 0 ? bidInfoVo.getBidPrice() : auctionValueVo.getBid());
+            //出价次数累加
+            auctionValuePo.setNum(auctionValueVo.getNum().intValue() + 1);
+            //消耗总拍豆，累加后更新
+            auctionValuePo.setConsumeBeans(auctionValueVo.getConsumeBeans().add(bidInfoVo.getActualPayBeans()));
+            //消耗总赠豆，累加后更新
+            auctionValuePo.setConsumeGive(auctionValueVo.getConsumeGive().add(Optional.ofNullable(bidInfoVo.getMortgageFreeBean()).orElse(new BigDecimal("0.00"))));
+            //更新时间
+            auctionValuePo.setUpdateTime(LocalDateTime.now());
+            auctionValueMapper.updateAuctionValueData(auctionValuePo);
+            return "更新成功";
+        }
+    }
+
+    /**
+     * @description 更新badge_customer表中的已消费拍豆
+     * @author mengjia
+     * @date 2019/9/23
+     * @param emblemId 徽章等级编号
+     * @param subjectId 用户ID
+     * @param payBeans 本次消费的拍豆
+     * @param currentBeans 当前已消费的拍豆
+     * @return int 返回匹配的条数
+     * @throws
+     **/
+    private int updateCustomerBadgeBeans(int emblemId,int subjectId,
+                                         BigDecimal payBeans,BigDecimal currentBeans,int emblemType){
+        BigDecimal newBeans = currentBeans.add(payBeans);
+        int newEmblemId = 0;
+        //1-好友徽章
+        //2-贡献徽章
+        if(emblemType == 1){
+            newEmblemId = CalcUtils.friendEmblemLevelIdMap.get(CalcUtils.calcFriendBadgeCoefficient(newBeans));
+        }else if(emblemType == 2){
+            newEmblemId = CalcUtils.ctrbEmblemLevelIdMap.get(CalcUtils.calcCtrbBadgeCoefficient(newBeans));
+        }else{
+            return 0;
+        }
+        BadgeCustomerVo badgeCustomerVo = new BadgeCustomerVo();
+        badgeCustomerVo.setEmblemId(emblemId);
+        badgeCustomerVo.setCustomerId(subjectId);
+        badgeCustomerVo.setBeans(newBeans);
+        badgeCustomerVo.setNewEmblemId(newEmblemId);
+        int effectNum = badgeCustomerMapper.updateCustomerctrbBadgeBeans(badgeCustomerVo);
+        if(effectNum != 0){
+            log.info("更新" + effectNum + "条数据");
+            return effectNum;
+        }else{
+            return 0;
+        }
+    }
+
+    /**
+     * @description 入库加价表
+     * @author mengjia
+     * @date 2019/9/28
+     * @param bidInfoVo
+     * @return void
+     * @throws
+     **/
+    private void insertMarkupRecord(BidInfoVo bidInfoVo) {
+
+        MarkupRecordSummary markupRecordSummary = markupRecordMapper.selectSummaryByGoodsId(bidInfoVo.getGoodsId());
+        MarkupRecord markupRecord = new MarkupRecord();
+        //公共部分赋值
+
+        //订单编号 order_number
+        markupRecord.setOrderNumber(ProjectConstant.GOODS_AUCTION + DateTimeUtil.getNowInSS() + bidInfoVo.getCustomerId());
+        //商品ID goods_id
+        markupRecord.setGoodsId(bidInfoVo.getGoodsId());
+        //当前出价 current_bid
+        markupRecord.setCurrentBid(bidInfoVo.getBidPrice());
+        //用户ID user_id
+        markupRecord.setUserId(bidInfoVo.getCustomerId());
+        //佣金 commission
+        markupRecord.setCommission(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
+        //佣金状态 cms_status
+        markupRecord.setCmsStatus(1);
+        //优惠金额 coupons
+        markupRecord.setCoupons(CalcUtils.ZERO);
+        //优惠类型 coupons_type
+        markupRecord.setCouponsType(0);
+        //支付方式 pay_amount
+        markupRecord.setPayType("balance");
+        //状态 status
+        markupRecord.setStatus(1);
+        //创建时间 create_time
+        markupRecord.setCreateTime(LocalDateTime.now());
+        //更新时间 update_time
+        markupRecord.setUpdateTime(LocalDateTime.now());
+        //乐观锁标志 version
+        markupRecord.setVersion(0);
+
+        //可变部分赋值
+        /**
+         * 按商品ID查询加价表记录，若查询结果为空，
+         *      说明该商品无加价记录，直接以当前拍卖商品和出价用户新增一条加价记录
+         * 若查询结果不为空，则按商品ID和用户ID查询加价表记录，若查询结果为空，
+         *      说明该商品有加价记录，但该用户为首次出价，新增一条该用户的加价记录
+         * 若查询结果不为空，则按商品ID和用户ID新增一条加价表记录，注意参拍总次数和用户参拍次数的字段入库
+         *
+         **/
+        if (markupRecordSummary == null) {
+            //参拍总次数 total_number
+            markupRecord.setTotalNumber(1);
+            //用户参拍次数 shooting_times
+            markupRecord.setShootingTimes(1);
+            //定金金额/保证金 bond
+            //用户首次参拍时需缴纳，与支付佣金相同
+            markupRecord.setBond(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
+        }else{
+            //获取该商品ID的参拍总次数
+            int totalNumber = markupRecordSummary.getMaxTotalNumber();
+            markupRecordSummary = markupRecordMapper.selectSummaryByGoodsIdAndUserId(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
+            //参拍总次数 total_number
+            markupRecord.setTotalNumber(totalNumber + 1);
+            if(markupRecordSummary == null){
+                //用户参拍次数 shooting_times
+                markupRecord.setShootingTimes(1);
+                //定金金额/保证金 bond
+                markupRecord.setBond(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
+            }else{
+                //获取该用户该商品的已参拍次数
+                int shootingTimes = markupRecordSummary.getMaxShootingTimes();
+                //用户参拍次数 shooting_times
+                markupRecord.setShootingTimes(shootingTimes + 1);
+                //定金金额/保证金 bond
+                markupRecord.setBond(CalcUtils.ZERO);
+            }
+        }
+
+        //实际支付金额：保证金 + 支付佣金 - 优惠金额 pay_amount
+        markupRecord.setPayAmount(markupRecord.getBond()
+                .add(markupRecord.getCommission()).subtract(markupRecord.getCoupons()));
+        log.info("入库加价记录：" + markupRecord);
+        markupRecordMapper.insert(markupRecord);
+    }
+
+    /**
+     * @description 入库交易流水表
+     * @author mengjia
+     * @date 2019/9/28
+     * @param bidInfoVo
+     * @return void
+     * @throws
+     **/
+    private void insertTransLog(BidInfoVo bidInfoVo) {
+        TransLog transLog = new TransLog();
+        //订单编号 order_number
+        transLog.setOrderNumber(ProjectConstant.GOODS_AUCTION + DateTimeUtil.getNowInSS() + bidInfoVo.getCustomerId());
+        //商品ID goods_id
+        transLog.setGoodsId(bidInfoVo.getGoodsId());
+        //交易发起者 subject
+        transLog.setSubject(bidInfoVo.getCustomerId());
+        Account account = accountMapper.selectAccountInfoBySubjectId(bidInfoVo.getCustomerId());
+        if(account != null){
+            //账户类型 account_type
+            transLog.setAccountType(account.getType());
+            //账户ID account_id
+            transLog.setAccountId(account.getId());
+        }else{
+            log.warn("The account info of " + bidInfoVo.getCustomerId() + "could not be queried from the table Account.");
+            //交易状态 status，成功入 1-成功，异常入2-失败
+            transLog.setStatus(2);
+        }
+        //交易通道 channel，入"balance"，表示拍豆
+        transLog.setChannel("balance");
+        //支付标记 trans_sign，入0-支出
+        transLog.setTransSign(0);
+        //交易类型 trans_type，入5-支付佣金
+        transLog.setTransType(5);
+        //当前出价 current_bid
+        transLog.setCurrentBid(bidInfoVo.getBidPrice());
+        //佣金 commission，入消耗的拍豆，没有消耗拍豆，记录为0.00
+        transLog.setCommission(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
+        //交易金额 amount，入消耗的拍豆，没有消耗拍豆，记录为0.00
+        transLog.setAmount(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
+        //实际支付金额 pay_amount，实际上支付的金额，来记录每一笔的实际出入金，入0.00
+        transLog.setPayAmount(CalcUtils.ZERO);
+        //交易状态 status，成功入 1-成功，异常入2-失败
+        transLog.setStatus(1);
+        //赠豆 with_beans，记录每笔消耗的赠豆，没有消耗赠豆时记录为0.00
+        transLog.setWithBeans(Optional.ofNullable(bidInfoVo.getMortgageFreeBean()).orElse(new BigDecimal("0.00")));
+        //支付类型 channel_type，1-拍豆；2-赠豆；3-拍豆和赠豆
+        /**
+         * 如果消耗拍豆和消耗赠豆都大于0，则支付类型为3-拍豆和赠豆
+         * 如果消耗拍豆大于0，消耗赠豆等于0，则支付类型为1-拍豆
+         * 如果消耗拍豆等于0，消耗赠豆大于0，则支付类型为2-赠豆
+         * 其余为异常情况
+         **/
+
+        if(bidInfoVo.getActualPayBeans().compareTo(CalcUtils.ZERO) > 0
+                && bidInfoVo.getMortgageFreeBean().compareTo(CalcUtils.ZERO) > 0){
+            transLog.setChannelType(3);
+        }else if(bidInfoVo.getActualPayBeans().compareTo(CalcUtils.ZERO) > 0
+                && bidInfoVo.getMortgageFreeBean().compareTo(CalcUtils.ZERO) == 0){
+            transLog.setChannelType(1);
+        }else if(bidInfoVo.getActualPayBeans().compareTo(CalcUtils.ZERO) == 0
+                && bidInfoVo.getMortgageFreeBean().compareTo(CalcUtils.ZERO) > 0){
+            transLog.setChannelType(2);
+        }else{
+            log.warn("Commission and with beans are illegal,please check.\n"
+                    + "Commission = " + bidInfoVo.getActualPayBeans() + ","
+                    + "withBeans = " + bidInfoVo.getMortgageFreeBean() + ".");
+            transLog.setStatus(2);
+        }
+
+        transLogMapper.insert(transLog);
+    }
+
+    @Override
+    @Transactional
+    public Result processBid(BidInfoVo bidInfoVo){
+        if(bidInfoVo.getActualPayBeans().compareTo(CalcUtils.ZERO) == 0
+                && bidInfoVo.getMortgageFreeBean().compareTo(CalcUtils.ZERO) == 0){
+            log.warn("Commission and with beans are both equal to zero,please check.");
+            return ResultGenerator.genFailResult("出价失败");
+        }
+        if(isBidSuccess(bidInfoVo.getCustomerId(),bidInfoVo.getBidPrice(),CalcUtils.COMMISSION_PROPORTION)){
+            //获取用户徽章信息
+            List<BadgeCustomerVo> badgeCustomerInfos = getCustomerBadgeInfos(bidInfoVo.getCustomerId());
+            //更新拍卖值表
+            updateOrInsertAuctionValueData(bidInfoVo,badgeCustomerInfos);
+            //用户存在徽章信息，更新之，否则新增徽章记录
+            if(badgeCustomerInfos != null && badgeCustomerInfos.size() > 0){
+                for(BadgeCustomerVo badgeCustomerInfo : badgeCustomerInfos){
+                    if(badgeCustomerInfo.getName() == "贡献徽章"){
+                        updateCustomerBadgeBeans(badgeCustomerInfo.getEmblemId()
+                                ,bidInfoVo.getCustomerId()
+                                ,bidInfoVo.getActualPayBeans()
+                                ,badgeCustomerInfo.getBeans()
+                                ,badgeCustomerInfo.getId());
+                        break;
+                    }else{
+                        log.info("Emblem type is " + badgeCustomerInfo.getName() + ",skip it.");
+                    }
+                }
+            }else{
+                BadgeCustomer badgeCustomer = new BadgeCustomer();
+                //获取徽章等级编号
+                int emblemId = CalcUtils.ctrbEmblemLevelIdMap.get(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans()));
+                //设置徽章等级编号
+                badgeCustomer.setEmblemId(emblemId);
+                //设置用户ID
+                badgeCustomer.setCustomerId(bidInfoVo.getCustomerId());
+                //设置消耗拍豆
+                badgeCustomer.setBeans(bidInfoVo.getActualPayBeans());
+                badgeCustomerMapper.insert(badgeCustomer);
+            }
+            //入库加价表
+            insertMarkupRecord(bidInfoVo);
+            //入库交易流水
+            insertTransLog(bidInfoVo);
+            return ResultGenerator.genSuccessResult();
+        }else{
+            return ResultGenerator.genFailResult("出价失败");
+        }
     }
 }

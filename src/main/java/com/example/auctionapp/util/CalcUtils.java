@@ -3,6 +3,8 @@ package com.example.auctionapp.util;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @description 计算类
@@ -16,6 +18,8 @@ public class CalcUtils {
     public static final BigDecimal ZERO = new BigDecimal("0.00");
     //统一精度
     public static final int UTIL_SCALE = 2;
+    //佣金比例
+    public static final BigDecimal COMMISSION_PROPORTION = new BigDecimal("0.05");
     //基础系数
     public static final BigDecimal BADGE_COEFFICIENT_BASIC = new BigDecimal("1.00");
     //一级系数
@@ -50,6 +54,27 @@ public class CalcUtils {
     public static final BigDecimal BADGE_VALUE_900 = new BigDecimal("900.00");
     //1000徽章值
     public static final BigDecimal BADGE_VALUE_1000 = new BigDecimal("1000.00");
+    //好友徽章等级与ID映射
+    public static Map<BigDecimal,Integer> friendEmblemLevelIdMap;
+    //贡献徽章等级与ID映射
+    public static Map<BigDecimal,Integer> ctrbEmblemLevelIdMap;
+    static{
+        friendEmblemLevelIdMap = new HashMap<>();
+        friendEmblemLevelIdMap.put(BADGE_COEFFICIENT_BASIC,11);
+        friendEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_1,1);
+        friendEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_2,2);
+        friendEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_3,3);
+        friendEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_4,4);
+        friendEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_5,5);
+
+        ctrbEmblemLevelIdMap = new HashMap<>();
+        ctrbEmblemLevelIdMap.put(BADGE_COEFFICIENT_BASIC,11);
+        ctrbEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_1,6);
+        ctrbEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_2,7);
+        ctrbEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_3,8);
+        ctrbEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_4,9);
+        ctrbEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_5,10);
+    }
 
     /**
      * @description 精度控制

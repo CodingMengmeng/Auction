@@ -28,10 +28,10 @@ public interface BadgeCustomerMapper extends BaseMapper<BadgeCustomer>{
 
     /**
      * 修改用户的贡献徽章对应的拍豆消耗值
-     * @param badgeCustomer
+     * @param badgeCustomerVo
      * @return
      */
-    Integer updateCustomerctrbBadgeBeans( BadgeCustomer badgeCustomer);
+    Integer updateCustomerctrbBadgeBeans( BadgeCustomerVo badgeCustomerVo);
     /**
      * 根据徽章类型和等级查询徽章的等级ID
      * @param badgeId 徽章类型

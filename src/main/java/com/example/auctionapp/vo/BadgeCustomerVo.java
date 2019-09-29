@@ -37,4 +37,7 @@ public class BadgeCustomerVo {
 
     @ApiModelProperty(value="拍豆消耗值")
     private BigDecimal beans;
+
+    @ApiModelProperty(value="新徽章等级编号")
+    private Integer newEmblemId;
 }

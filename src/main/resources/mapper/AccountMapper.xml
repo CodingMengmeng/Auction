@@ -41,4 +41,8 @@
         SELECT balance,with_beans FROM account
         WHERE subject_id = #{subjectId};
     </select>
+    <select id="selectAccountInfoBySubjectId" resultType="com.example.auctionapp.entity.Account" parameterType="Integer">
+        select * from account
+        where subject_id = #{subjectId};
+    </select>
 </mapper>
