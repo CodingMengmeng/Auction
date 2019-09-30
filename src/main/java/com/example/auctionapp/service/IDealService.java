@@ -15,7 +15,7 @@ public interface IDealService {
     /*
     * 根据拍品id，客户id查询是否拍中
     * */
-    boolean isConclued(String auctionGoodsId,int customerId);
+    boolean isDealConclued(String auctionGoodsId) throws Exception;
 
     public List<DealConditionVo> getdealConditionInfo(String auctionGoodsId);
 

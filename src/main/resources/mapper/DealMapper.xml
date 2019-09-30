@@ -4,10 +4,10 @@
     <select id="selectAuctionMinParam" resultType="map">
         select min_section,min_number_people,ag.number from pat_sell.auction_goods ag where ag.number=#{auctionGoodsId}
     </select>
-    <select id="selectActualPeopleNum" resultType="map">
+    <select id="selectActualPeopleNum" resultType="Integer">
        SELECT count(*) from pat_sell.auction_value av where av.goods_id=#{auctionGoodsId}
     </select>
-    <select id="selectRankFirstUserId" resultType="map">
+    <select id="selectRankFirstUserId" resultType="Integer">
            SELECT rk.customer_id from pat_sell.ranking_list rk where rk.goods_id = #{auctionGoodsId} ORDER BY rk.goods_value desc limit 1
     </select>
     <select id="selectMaxBid" resultType="map">
@@ -17,4 +17,10 @@
     <select id="selectDealInfoById" resultType="com.example.auctionapp.vo.DealConditionVo">
        select min_section,min_number_people,ag.profit,cost,beans_pond from pat_sell.auction_goods ag where ag.number=#{auctionGoodsId}
     </select>
+
+    <select id="selectTotalPayedBeans">
+        select count(commission) from pat_sell.markup_record mr where mr.goods_id=#{auctionGoodsId} and mr.user_id=#{customer_id}
+    </select>
+
+
 </mapper>
