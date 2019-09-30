@@ -32,7 +32,7 @@
         <include refid="Base_Column_List"/>
         from ranking_list
         where goods_id = #{goodsId,jdbcType=TINYINT}
-        order by goods_value asc;
+        order by goods_value desc;
     </select>
 
     <update id="updateGoodsValue" parameterType="com.example.auctionapp.entity.RankingList">
