@@ -2,6 +2,7 @@ package com.example.auctionapp.service;
 
 import com.example.auctionapp.vo.DealConditionVo;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -18,5 +19,7 @@ public interface IDealService {
     boolean isDealConclued(String auctionGoodsId) throws Exception;
 
     public List<DealConditionVo> getdealConditionInfo(String auctionGoodsId);
+
+    public List<BigDecimal> calWinRate(List<BigDecimal> goodsValueList);
 
 }
