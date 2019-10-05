@@ -85,6 +85,9 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
     @Resource
     private BadgeCustomerMapper badgeCustomerMapper;
 
+    @Resource
+    private RankingListMapper rankingListMapper;
+
     /**
      * 查询正在拍卖的拍品
      *
@@ -349,7 +352,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         return badgeCustomerMapper.selectBadgeInfosById(subjectId);
     }
     /**
-     * @description 拍卖值表更新或新增记录
+     * @description 更新或新增拍卖值信息，包括拍卖值表和排行表
      * @author mengjia
      * @date 2019/9/18
      * @param bidInfoVo 出价信息
@@ -359,6 +362,8 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
     private String updateOrInsertAuctionValueData(BidInfoVo bidInfoVo,List<BadgeCustomerVo> badgeCustomerInfos){
         //根据用户id和拍品id获取拍卖值信息
         AuctionValue auctionValueVo = auctionValueMapper.selectAuctionValueInfoById(bidInfoVo.getCustomerId(),bidInfoVo.getGoodsId());
+        //根据用户id和拍品id获取排行信息
+        RankingList rankingListVo = rankingListMapper.selectByGoodsIdAndCustomerId(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
         //初始化贡献徽章系数和好友徽章系数为1.00
         BigDecimal ctrbBadgeCoefficient = CalcUtils.BADGE_COEFFICIENT_BASIC;
         BigDecimal friendBadgeCoefficient = CalcUtils.BADGE_COEFFICIENT_BASIC;
@@ -374,8 +379,10 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
                 }
             }
         }
-        //拍卖值表中无记录，则新增；否则更新拍卖值记录
+        //拍卖值表中无记录，则拍卖值表和排行表中新增记录；否则更新记录
         if(auctionValueVo == null){
+            //新增拍卖值表记录
+
             auctionValueVo = new AuctionValue();
             //用户编号
             auctionValueVo.setCustomerId(bidInfoVo.getCustomerId());
@@ -404,8 +411,29 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             //乐观锁，为1
             auctionValueVo.setVersion(1);
             auctionValueMapper.insert(auctionValueVo);
+
+            //新增排行表记录
+
+            rankingListVo = new RankingList();
+            //排名 rank，首次新增则排名为1
+            rankingListVo.setRank(1);
+            //客户 customer_id
+            rankingListVo.setCustomerId(bidInfoVo.getCustomerId());
+            //拍品 goods_id
+            rankingListVo.setGoodsId(bidInfoVo.getGoodsId());
+            //拍卖值 goods_value
+            rankingListVo.setGoodsValue(CalcUtils.calcAuctionValue(
+                    bidInfoVo.getActualPayBeans(),
+                    ctrbBadgeCoefficient,
+                    friendBadgeCoefficient));
+            rankingListVo.setCreateTime(LocalDateTime.now());
+            rankingListVo.setUpdateTime(LocalDateTime.now());
+            rankingListVo.setVersion(1);
+            rankingListMapper.insert(rankingListVo);
             return "新增成功";
         }else{
+            //更新拍卖值表
+
             AuctionValue auctionValuePo = new AuctionValue();
             //克隆拍卖值实体bean
             BeanUtils.copyProperties(auctionValueVo,auctionValuePo);
@@ -429,6 +457,36 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             //更新时间
             auctionValuePo.setUpdateTime(LocalDateTime.now());
             auctionValueMapper.updateAuctionValueData(auctionValuePo);
+
+            //更新排行表记录
+            RankingList rankingListPo = new RankingList();
+            //克隆排行表实体bean
+            BeanUtils.copyProperties(rankingListVo,rankingListPo);
+            //拍卖值累加
+            rankingListPo.setGoodsValue(rankingListVo.getGoodsValue().add(
+                    CalcUtils.calcAuctionValue(
+                            bidInfoVo.getActualPayBeans(),
+                            ctrbBadgeCoefficient,
+                            friendBadgeCoefficient
+                    )));
+            //更新排行表中的拍卖值
+            rankingListMapper.updateGoodsValue(rankingListPo);
+
+            //重新更新排行
+            //1、获取该拍品的所有记录（已按拍卖值大小排序）
+            List<RankingList> rankingLists = rankingListMapper.selectByGoodsId(bidInfoVo.getGoodsId());
+            //2、判断是否为多条，多条则依次更新rank，否则跳过更新
+            if(rankingLists.size() > 1){
+                //3、根据拍品ID和客户ID依次更新排行rank字段
+                for(int seq = 1;seq <= rankingLists.size();seq++){
+                    rankingLists.get(seq - 1).setRank(seq);
+                    rankingLists.get(seq - 1).setUpdateTime(LocalDateTime.now());
+                    rankingListMapper.updateRank(rankingLists.get(seq - 1));
+                }
+            }else{
+                log.info("don't need to update rank for goods_id = " + bidInfoVo.getGoodsId());
+            }
+
             return "更新成功";
         }
     }
