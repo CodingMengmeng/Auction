@@ -7,6 +7,11 @@ public class WinRateRequestVo {
     BigDecimal goodsValue;//拍卖值
     int customerId;//客户id
 
+    public WinRateRequestVo(BigDecimal goodsValue, int customerId) {
+        this.goodsValue = goodsValue;
+        this.customerId = customerId;
+    }
+
     public BigDecimal getGoodsValue() {
         return goodsValue;
     }
