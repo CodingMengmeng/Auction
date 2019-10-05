@@ -1,6 +1,8 @@
 package com.example.auctionapp.service;
 
 import com.example.auctionapp.vo.DealConditionVo;
+import com.example.auctionapp.vo.WinRateRequestVo;
+import com.example.auctionapp.vo.WinRateResponseVo;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,6 +22,6 @@ public interface IDealService {
 
     public List<DealConditionVo> getdealConditionInfo(String auctionGoodsId);
 
-    public List<BigDecimal> calWinRate(List<BigDecimal> goodsValueList);
+    public List<WinRateResponseVo> calWinRate(List<WinRateRequestVo> winRateRequestVoList);
 
 }

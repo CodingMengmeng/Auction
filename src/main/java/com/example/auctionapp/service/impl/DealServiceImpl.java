@@ -2,13 +2,12 @@ package com.example.auctionapp.service.impl;
 
 import com.example.auctionapp.dao.DealMapper;
 import com.example.auctionapp.service.IDealService;
-import com.example.auctionapp.vo.DealConditionVo;
-import com.example.auctionapp.vo.SecondWinRate;
-import com.example.auctionapp.vo.WinRateVo;
+import com.example.auctionapp.vo.*;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 @Service
@@ -80,22 +79,32 @@ public class DealServiceImpl implements IDealService {
 
     }
 
-    //自定义降序排序器
-    public class DescComparator implements Comparator<BigDecimal> {
-        public int compare(BigDecimal value1,BigDecimal value2){
+    //按拍卖值降序排序器
+    public class GoodsValueDescComparator implements Comparator<WinRateRequestVo> {
+        public int compare(WinRateRequestVo winRateRequestVo1,WinRateRequestVo winRateRequestVo2){
+            BigDecimal value1 = winRateRequestVo1.getGoodsValue();
+            BigDecimal value2 = winRateRequestVo2.getGoodsValue();
             return value2.subtract(value1).intValue();
+        }
+    }
+    //按拍卖值升序排序器
+    public class GoodsValueAscComparator implements Comparator<WinRateRequestVo> {
+        public int compare(WinRateRequestVo winRateRequestVo1,WinRateRequestVo winRateRequestVo2){
+            BigDecimal value1 = winRateRequestVo1.getGoodsValue();
+            BigDecimal value2 = winRateRequestVo2.getGoodsValue();
+            return value1.subtract(value2).intValue();
         }
     }
       //计算拍中几率接口
       //input：拍卖值列表 goodsValueList
-      //outpur:拍中几率列表
-      public List<BigDecimal> calWinRate(List<BigDecimal> goodsValueList){
-          if(goodsValueList==null){
+      //output:拍中几率列表
+      public List<WinRateResponseVo> calWinRate(List<WinRateRequestVo> winRateRequestVoList){
+          if(winRateRequestVoList==null || winRateRequestVoList.size()<=0){
               return null;
           }
           //首先对拍卖值列表降序排列
-          Collections.sort(goodsValueList,new DescComparator());
-          BigDecimal highestGoodsValue = goodsValueList.get(0);
+          Collections.sort(winRateRequestVoList,new GoodsValueDescComparator());
+          BigDecimal highestGoodsValue = winRateRequestVoList.get(0).getGoodsValue();
           //第一次划分区间
           BigDecimal intervalIncrementValue = highestGoodsValue.multiply(new BigDecimal(String.valueOf(0.2)));
           intervalIncrementValue.setScale(2,BigDecimal.ROUND_HALF_UP);
@@ -103,79 +112,97 @@ public class DealServiceImpl implements IDealService {
           BigDecimal tripleIntervalIncrementValue = intervalIncrementValue.multiply(new BigDecimal(String.valueOf(3))).setScale(2,BigDecimal.ROUND_HALF_UP);
           BigDecimal quadrupleIntervalIncrementValue = intervalIncrementValue.multiply(new BigDecimal(String.valueOf(4))).setScale(2,BigDecimal.ROUND_HALF_UP);
 
-          WinRateVo winRateVo1 = new WinRateVo(new BigDecimal(String.valueOf(0)) ,intervalIncrementValue,50.00,60.00,0);
-          WinRateVo winRateVo2 = new WinRateVo(intervalIncrementValue ,doubleIntervalIncrementValue,60.00,70.00,0);
-          WinRateVo winRateVo3 = new WinRateVo(doubleIntervalIncrementValue ,tripleIntervalIncrementValue,70.00,80.00,0);
-          WinRateVo winRateVo4 = new WinRateVo(tripleIntervalIncrementValue ,quadrupleIntervalIncrementValue,80.00,90.00,0);
-          WinRateVo winRateVo5 = new WinRateVo(quadrupleIntervalIncrementValue ,highestGoodsValue,90.00,100.00,0);
-          List<WinRateVo> winRateVos = new ArrayList<>();
-          winRateVos.add(winRateVo1);
-          winRateVos.add(winRateVo2);
-          winRateVos.add(winRateVo3);
-          winRateVos.add(winRateVo4);
-          winRateVos.add(winRateVo5);
+          FirstWinRateIntervalVo firstWinRateIntervalVo1 = new FirstWinRateIntervalVo(new BigDecimal(String.valueOf(0)) ,intervalIncrementValue,BigDecimal.valueOf(50.00) ,BigDecimal.valueOf(60.00),0);
+          FirstWinRateIntervalVo firstWinRateIntervalVo2 = new FirstWinRateIntervalVo(intervalIncrementValue ,doubleIntervalIncrementValue,BigDecimal.valueOf(60.00) ,BigDecimal.valueOf(70.00),0);
+          FirstWinRateIntervalVo firstWinRateIntervalVo3 = new FirstWinRateIntervalVo(doubleIntervalIncrementValue ,tripleIntervalIncrementValue,BigDecimal.valueOf(70.00) ,BigDecimal.valueOf(80.00),0);
+          FirstWinRateIntervalVo firstWinRateIntervalVo4 = new FirstWinRateIntervalVo(tripleIntervalIncrementValue ,quadrupleIntervalIncrementValue,BigDecimal.valueOf(80.00) ,BigDecimal.valueOf(90.00),0);
+          FirstWinRateIntervalVo firstWinRateIntervalVo5 = new FirstWinRateIntervalVo(quadrupleIntervalIncrementValue ,highestGoodsValue,BigDecimal.valueOf(90.00) ,BigDecimal.valueOf(100.00),0);
+          List<FirstWinRateIntervalVo> firstWinRateIntervalVos = new ArrayList<>();
+          firstWinRateIntervalVos.add(firstWinRateIntervalVo1);
+          firstWinRateIntervalVos.add(firstWinRateIntervalVo2);
+          firstWinRateIntervalVos.add(firstWinRateIntervalVo3);
+          firstWinRateIntervalVos.add(firstWinRateIntervalVo4);
+          firstWinRateIntervalVos.add(firstWinRateIntervalVo5);
           //统计各区间人数
-          for(BigDecimal goodsValue : goodsValueList){
+          for(WinRateRequestVo winRateRequestVo : winRateRequestVoList){
+              BigDecimal goodsValue = winRateRequestVo.getGoodsValue();
               if(goodsValue.compareTo(new BigDecimal(String.valueOf(0)))>0 && goodsValue.compareTo(intervalIncrementValue)<=0){
-                  winRateVo1.setIntervalPeopleNum(winRateVo1.getIntervalPeopleNum()+1);
+                  firstWinRateIntervalVo1.setIntervalPeopleNum(firstWinRateIntervalVo1.getIntervalPeopleNum()+1);
               }else if(goodsValue.compareTo(intervalIncrementValue)>0 && goodsValue.compareTo(doubleIntervalIncrementValue)<=0) {
-                  winRateVo2.setIntervalPeopleNum(winRateVo2.getIntervalPeopleNum() + 1);
+                  firstWinRateIntervalVo2.setIntervalPeopleNum(firstWinRateIntervalVo2.getIntervalPeopleNum() + 1);
               }else if(goodsValue.compareTo(doubleIntervalIncrementValue)>0 && goodsValue.compareTo(tripleIntervalIncrementValue)<=0) {
-                  winRateVo3.setIntervalPeopleNum(winRateVo3.getIntervalPeopleNum() + 1);
+                  firstWinRateIntervalVo3.setIntervalPeopleNum(firstWinRateIntervalVo3.getIntervalPeopleNum() + 1);
               }else if(goodsValue.compareTo(tripleIntervalIncrementValue)>0 && goodsValue.compareTo(quadrupleIntervalIncrementValue)<=0) {
-                  winRateVo4.setIntervalPeopleNum(winRateVo4.getIntervalPeopleNum() + 1);
+                  firstWinRateIntervalVo4.setIntervalPeopleNum(firstWinRateIntervalVo4.getIntervalPeopleNum() + 1);
               }else if(goodsValue.compareTo(quadrupleIntervalIncrementValue)>0 && goodsValue.compareTo(highestGoodsValue)<=0) {
-                  winRateVo5.setIntervalPeopleNum(winRateVo5.getIntervalPeopleNum() + 1);
+                  firstWinRateIntervalVo5.setIntervalPeopleNum(firstWinRateIntervalVo5.getIntervalPeopleNum() + 1);
               }
           }
           //第二次划分区间
-          for(WinRateVo winRateVo:winRateVos){
-              double secondWinRateIncrement = ((winRateVo.getWinRateHighValue()-winRateVo.getWinRateLowValue())/winRateVo.getIntervalPeopleNum());
-              BigDecimal bg = new BigDecimal(secondWinRateIncrement).setScale(2, BigDecimal.ROUND_HALF_UP);
-              secondWinRateIncrement = bg.doubleValue();
-              List<SecondWinRate> secondWinRateList = new ArrayList<>();
-              for(int i=0;i<winRateVo.getIntervalPeopleNum();i++){
-                  SecondWinRate secondWinRate = new SecondWinRate();
-                  secondWinRate.setLowRate(winRateVo.getWinRateLowValue()+i*secondWinRateIncrement);
-                  secondWinRate.setHighRate(winRateVo.getWinRateLowValue()+(i+1)*secondWinRateIncrement);
-                  if (i==winRateVo.getIntervalPeopleNum()-1){
-                      secondWinRate.setHighRate(winRateVo.getWinRateHighValue());
+          for(FirstWinRateIntervalVo firstWinRateIntervalVo : firstWinRateIntervalVos){
+              BigDecimal secondWinRateIncrement = (firstWinRateIntervalVo.getWinRateHighValue().subtract(firstWinRateIntervalVo.getWinRateLowValue())).divide(BigDecimal.valueOf(firstWinRateIntervalVo.getIntervalPeopleNum()));
+              secondWinRateIncrement.setScale(2,RoundingMode.HALF_UP);
+              List<SecondWinRateIntervalVo> secondWinRateIntervalVoList = new ArrayList<>();
+              for(int i = 0; i< firstWinRateIntervalVo.getIntervalPeopleNum(); i++){
+                  SecondWinRateIntervalVo secondWinRateIntervalVo = new SecondWinRateIntervalVo();
+                  secondWinRateIntervalVo.setLowRate(firstWinRateIntervalVo.getWinRateLowValue().add(secondWinRateIncrement.multiply(BigDecimal.valueOf(i))));
+                  secondWinRateIntervalVo.setHighRate(firstWinRateIntervalVo.getWinRateLowValue().add(secondWinRateIncrement.multiply(BigDecimal.valueOf(i+1))));
+                  //如果是最后一个区间，直接加精度会多一点，所以直接set整数
+                  if (i== firstWinRateIntervalVo.getIntervalPeopleNum()-1){
+                      secondWinRateIntervalVo.setHighRate(firstWinRateIntervalVo.getWinRateHighValue());
                   }
-                  secondWinRateList.add(secondWinRate);
+                  secondWinRateIntervalVoList.add(secondWinRateIntervalVo);
               }
-              winRateVo.setSecondWinRateList(secondWinRateList);
+              //一个第一次的区间对应1-多个二次划分区间
+              firstWinRateIntervalVo.setSecondWinRateIntervalVoList(secondWinRateIntervalVoList);
           }
           List<BigDecimal> winRates = new ArrayList<>();
-          //随机分配区间和拍中概率
-          Random ran = new Random();
-          for(WinRateVo winRateVo:winRateVos){
-              //拍卖值高的 拍中几率也要高 所以就按顺序分配区间 每个区间生成一个随机数就行了 就是从小到大的 最后返回的时候再和输入的userId对应。。
-              List<SecondWinRate> secondWinRateList = winRateVo.getSecondWinRateList();
-              for(int i=0;i<winRateVo.getIntervalPeopleNum();i++){
-                  SecondWinRate secondWinRate = secondWinRateList.get(i);
-                  //生成[secondWinRate.getLowRate(),secondWinRate.getHighRate()]
-                  double randomIndex = ran.nextDouble(secondWinRate.getHighRate());
-                  randomIndexs[i] = randomIndex+1;
+          //先从小到大生成随机的随机拍中概率
+          Random random = new Random();
+          for(FirstWinRateIntervalVo firstWinRateIntervalVo : firstWinRateIntervalVos){
+              //拍卖值高的 拍中几率也要高 所以就按顺序分配区间 每个区间生成一个随机数就行了 就是从小到大的
+              //最后返回的时候再和输入的userId对应。。想想输入输出的结构
+              List<SecondWinRateIntervalVo> secondWinRateIntervalVoList = firstWinRateIntervalVo.getSecondWinRateIntervalVoList();
+              for(int i = 0; i< firstWinRateIntervalVo.getIntervalPeopleNum(); i++){
+                  SecondWinRateIntervalVo secondWinRateIntervalVo = secondWinRateIntervalVoList.get(i);
+                  //生成[secondWinRateIntervalVo.getLowRate(),secondWinRateIntervalVo.getHighRate()]区间内的随机浮点数
+                  Double randomMin = secondWinRateIntervalVo.getLowRate().doubleValue();
+                  Double randomMax = secondWinRateIntervalVo.getHighRate().doubleValue();
+                  double randomWinRate = randomMin+random.nextDouble()*(randomMax-randomMin);
+                  BigDecimal randomWinRateBD = BigDecimal.valueOf(randomWinRate).setScale(2, RoundingMode.HALF_UP);
+                  winRates.add(randomWinRateBD);
 
               }
           }
-          //再将所有的数组拼起来。。
-          BigDecimal intervalIncrementValue =
-          return null;
+          //按拍卖值大小依次分配区间..其实就对输入的拍卖值升序排序，依次赋值拍中几率就行了
+          //组装返回对象
+          List<WinRateResponseVo> WinRateResponseList = new ArrayList<>();
+          for(int i=0;i<winRateRequestVoList.size();i++){
+              BigDecimal winRate = winRates.get(i);
+              WinRateResponseVo winRateResponseVo = new WinRateResponseVo(winRateRequestVoList.get(i).getGoodsValue(),
+                      winRateRequestVoList.get(i).getCustomerId(), winRate);
+              WinRateResponseList.add(winRateResponseVo);
+          }
+          return WinRateResponseList;
       }
 
 
     public static void main(String[] args) {
-        List<BigDecimal> list = new ArrayList<BigDecimal>();
-        BigDecimal bean1 = new BigDecimal("1.0");
-        BigDecimal bean3 = new BigDecimal("1.5");
-
-        BigDecimal bean2 = new BigDecimal("2.0");
-        list.add(bean1);
-        list.add(bean2);
-        list.add(bean3);
+        List<WinRateRequestVo> winRateRequestVoList = new ArrayList<>();
+        WinRateRequestVo WinRateRequestVo1 = new WinRateRequestVo();
+        WinRateRequestVo1.setCustomerId(1);
+        WinRateRequestVo1.setGoodsValue(BigDecimal.valueOf(100));
+        WinRateRequestVo WinRateRequestVo2 = new WinRateRequestVo();
+        WinRateRequestVo1.setCustomerId(2);
+        WinRateRequestVo1.setGoodsValue(BigDecimal.valueOf(101));
+        WinRateRequestVo WinRateRequestVo3 = new WinRateRequestVo();
+        WinRateRequestVo1.setCustomerId(3);
+        WinRateRequestVo1.setGoodsValue(BigDecimal.valueOf(99));
+        winRateRequestVoList.add(WinRateRequestVo1);
+        winRateRequestVoList.add(WinRateRequestVo2);
+        winRateRequestVoList.add(WinRateRequestVo3);
         DealServiceImpl dsi = new DealServiceImpl();
-        dsi.calWinRate(list);
+        System.out.println( dsi.calWinRate(winRateRequestVoList));
 
 //        Collections.sort(list,new MyComparator());
 //        System.out.println(list.get(0).para);

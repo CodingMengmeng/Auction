@@ -3,18 +3,19 @@ package com.example.auctionapp.vo;
 import java.math.BigDecimal;
 import java.util.List;
 
-public class WinRateVo {
-    //拍中几率VO
+//拍中几率 第一次划分区间 vo
+public class FirstWinRateIntervalVo {
     BigDecimal intervalLowValue;//拍卖值的左区间
     BigDecimal intervalHighValue;//拍卖值的右区间
-    double winRateLowValue;//拍中几率的左区间
-    double winRateHighValue;//拍中几率的右区间
+    BigDecimal winRateLowValue;//拍中几率的左区间
+    BigDecimal winRateHighValue;//拍中几率的右区间
     int intervalPeopleNum;//落在区间内的人数
-    List<SecondWinRate> secondWinRateList;
+    List<SecondWinRateIntervalVo> secondWinRateIntervalVoList;// 1个第一次的区间对应1-多个二次划分区间
 
-    public WinRateVo(){}
 
-    public WinRateVo(BigDecimal intervalLowValue, BigDecimal intervalHighValue, double winRateLowValue, double winRateHighValue, int intervalPeopleNum) {
+    public FirstWinRateIntervalVo(){}
+
+    public FirstWinRateIntervalVo(BigDecimal intervalLowValue, BigDecimal intervalHighValue, BigDecimal winRateLowValue, BigDecimal winRateHighValue, int intervalPeopleNum) {
         this.intervalLowValue = intervalLowValue;
         this.intervalHighValue = intervalHighValue;
         this.winRateLowValue = winRateLowValue;
@@ -38,19 +39,19 @@ public class WinRateVo {
         this.intervalHighValue = intervalHighValue;
     }
 
-    public double getWinRateLowValue() {
+    public BigDecimal getWinRateLowValue() {
         return winRateLowValue;
     }
 
-    public void setWinRateLowValue(double winRateLowValue) {
+    public void setWinRateLowValue(BigDecimal winRateLowValue) {
         this.winRateLowValue = winRateLowValue;
     }
 
-    public double getWinRateHighValue() {
+    public BigDecimal getWinRateHighValue() {
         return winRateHighValue;
     }
 
-    public void setWinRateHighValue(double winRateHighValue) {
+    public void setWinRateHighValue(BigDecimal winRateHighValue) {
         this.winRateHighValue = winRateHighValue;
     }
 
@@ -62,11 +63,11 @@ public class WinRateVo {
         this.intervalPeopleNum = intervalPeopleNum;
     }
 
-    public List<SecondWinRate> getSecondWinRateList() {
-        return secondWinRateList;
+    public List<SecondWinRateIntervalVo> getSecondWinRateIntervalVoList() {
+        return secondWinRateIntervalVoList;
     }
 
-    public void setSecondWinRateList(List<SecondWinRate> secondWinRateList) {
-        this.secondWinRateList = secondWinRateList;
+    public void setSecondWinRateIntervalVoList(List<SecondWinRateIntervalVo> secondWinRateIntervalVoList) {
+        this.secondWinRateIntervalVoList = secondWinRateIntervalVoList;
     }
 }
