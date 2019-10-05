@@ -1,7 +1,11 @@
 package com.example.auctionapp.service.impl;
 
+import com.example.auctionapp.core.ProjectConstant;
 import com.example.auctionapp.dao.DealMapper;
+import com.example.auctionapp.dao.TransLogMapper;
+import com.example.auctionapp.entity.TransLog;
 import com.example.auctionapp.service.IDealService;
+import com.example.auctionapp.util.DateTimeUtil;
 import com.example.auctionapp.vo.*;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +19,13 @@ import java.util.*;
 public class DealServiceImpl implements IDealService {
 
     @Resource private DealMapper dealMapper;
+
+    @Resource
+    TransLogMapper transLogMapper;
     /*
      * 根据拍品id查询排中相关参数
      * */
-    public Map<String, Object> getGoodsDealParamById(String auctionGoodsId){
+    public Map<String, Object> getGoodsDealParamById(int auctionGoodsId){
         System.out.println("service:"+auctionGoodsId);
         return dealMapper.selectAuctionMinParam(auctionGoodsId);
     }
@@ -27,7 +34,7 @@ public class DealServiceImpl implements IDealService {
      * @auctionGoodsId 拍品Id
      * 返回true/false
      * */
-    public boolean isDealConclued(String auctionGoodsId) throws Exception{
+    public boolean isDealConclued(int auctionGoodsId) throws Exception{
         //1、参拍人数>=最低参拍人数（拍品表）
         int ActualPeopleNum =  dealMapper.selectActualPeopleNum(auctionGoodsId);
         Map<String, Object> auctionMinParam = dealMapper.selectAuctionMinParam(auctionGoodsId);
@@ -74,7 +81,7 @@ public class DealServiceImpl implements IDealService {
     }
 
 
-    public List<DealConditionVo> getdealConditionInfo(String auctionGoodsId) {
+    public List<DealConditionVo> getdealConditionInfo(int auctionGoodsId) {
 
        return dealMapper.selectDealInfoById(auctionGoodsId);
 
@@ -192,6 +199,49 @@ public class DealServiceImpl implements IDealService {
           }
           return WinRateResponseList;
       }
+
+    //代理返佣逻辑
+    public int executeAgentCommision(BidInfoVo bidInfoVo){
+        //1、计算佣金
+         //返佣基数--总拍豆
+        BigDecimal commisionBaseAmount = dealMapper.selectDealInfoById(bidInfoVo.getGoodsId()).get(0).getBeans_pond();
+         //查返佣系数
+        //先查agent表的默认比例
+        //用customer表和agent表关联
+        BigDecimal commisionRate = dealMapper.selectAgentProportion(bidInfoVo.getCustomerId());
+        //查不到的话再查固定比例
+        //固定比例表的逻辑是，先算出佣金--用户支付的总拍豆，取佣金在start_price和end_price之间的比例
+        if(commisionRate==null){
+            BigDecimal totalPayedBeans = dealMapper.selectTotalPayedBeans(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
+            commisionRate = dealMapper.selectProfitModulProportion(totalPayedBeans);
+        }
+        //【公式待修改】
+        BigDecimal commisionAmount = commisionBaseAmount.multiply(commisionRate);
+        //2、佣金入流水表(新insert一条记录，sign入1 type入4，入下order编号 拍品编号 发起者编号)
+        TransLog transLog = new TransLog();
+        transLog.setOrderNumber(ProjectConstant.SHARE_PROFIT + DateTimeUtil.getNowInSS() + bidInfoVo.getCustomerId());
+        //商品ID goods_id
+        transLog.setGoodsId(bidInfoVo.getGoodsId());
+        //交易发起者 subject
+        transLog.setSubject(bidInfoVo.getCustomerId());
+        //交易状态 成功
+        transLog.setStatus(1);
+        //支付标记--收入
+        transLog.setTransSign(1);
+        //交易类型--返佣
+        transLog.setTransType(8);
+        transLogMapper.insert(transLog);
+        //3、拍品表更新总拍豆--【待修改】
+        commisionBaseAmount.subtract(commisionAmount);
+        if(dealMapper.updateBeansPonds(commisionBaseAmount,bidInfoVo.getGoodsId())>0){
+            return 1;}
+        else{
+            return 0;
+        }
+    }
+
+
+
 
 
     public static void main(String[] args) {

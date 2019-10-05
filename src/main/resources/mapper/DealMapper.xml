@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.auctionapp.dao.DealMapper">
     <select id="selectAuctionMinParam" resultType="map">
-        select min_section,min_number_people,ag.number from pat_sell.auction_goods ag where ag.number=#{auctionGoodsId}
+        select min_section,min_number_people,ag.number from pat_sell.auction_goods ag where ag.id=#{auctionGoodsId}
     </select>
     <select id="selectActualPeopleNum" resultType="Integer">
        SELECT count(*) from pat_sell.auction_value av where av.goods_id=#{auctionGoodsId}
@@ -10,17 +10,28 @@
     <select id="selectRankFirstUserId" resultType="Integer">
            SELECT rk.customer_id from pat_sell.ranking_list rk where rk.goods_id = #{auctionGoodsId} ORDER BY rk.goods_value desc limit 1
     </select>
-    <select id="selectMaxBid" resultType="map">
-      select count(current_bid) from pat_sell.markup_record mr where mr.goods_id=#{auctionGoodsId} and mr.user_id=#{customer_id}
+    <select id="selectMaxBid" resultType = "java.math.BigDecimal">
+      select sum(current_bid) from pat_sell.markup_record mr where mr.goods_id=#{auctionGoodsId} and mr.user_id=#{customer_id}
     </select>
 
     <select id="selectDealInfoById" resultType="com.example.auctionapp.vo.DealConditionVo">
-       select min_section,min_number_people,ag.profit,cost,beans_pond from pat_sell.auction_goods ag where ag.number=#{auctionGoodsId}
+       select min_section,min_number_people,ag.profit,cost,beans_pond from pat_sell.auction_goods ag where ag.id=#{auctionGoodsId}
     </select>
 
-    <select id="selectTotalPayedBeans">
-        select count(commission) from pat_sell.markup_record mr where mr.goods_id=#{auctionGoodsId} and mr.user_id=#{customer_id}
+    <select id="selectTotalPayedBeans" resultType = "java.math.BigDecimal">
+        select sum(commission) from pat_sell.markup_record mr where mr.goods_id=#{auctionGoodsId} and mr.user_id=#{customer_id}
     </select>
 
+    <select id="selectAgentProportion" resultType = "java.math.BigDecimal">
+        select a.proportion from pat_sell.agent a inner join pat_sell.customer c on a.user_id = c.agent_id where c.id=#{customer_id} and a.proportion_type=1;
+    </select>
+
+    <select id="selectProfitModulProportion" resultType = "java.math.BigDecimal">
+        select proportion from pat_sell.profit_modul p where #{commission}>p.start_price and p.end_price>=#{commission} and p.STATUS=1;
+    </select>
+
+    <update id="updateBeansPonds" >
+        update auction_goods set beans_pond = #{beansPond} where id = #{auctionGoodsId};
+    </update>
 
 </mapper>
