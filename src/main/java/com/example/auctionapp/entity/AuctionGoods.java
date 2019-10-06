@@ -145,4 +145,10 @@ public class AuctionGoods implements Serializable {
      */
     @TableField(exist = false)
     private String goodsImg;
+
+    /**
+     * 轮次
+     */
+    @TableField("rounds")
+    private Integer rounds;
 }

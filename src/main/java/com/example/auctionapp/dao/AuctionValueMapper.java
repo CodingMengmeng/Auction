@@ -31,4 +31,16 @@ public interface AuctionValueMapper extends BaseMapper<AuctionValue>{
      * @return
      */
     AuctionValue selectAuctionValueInfoById(@Param("customerId") Integer customerId, @Param("goodsId") Integer goodsId);
+
+
+    /**
+     * @description 根据拍品编号和拍中用户编号清空拍卖值记录
+     * @author mengjia
+     * @date 2019/10/6
+     * @param goodsId 拍品编号
+     * @param customerId 拍中用户编号
+     * @return java.lang.Integer
+     * @throws
+     **/
+    Integer deleteByGoodsIdAndCustomerId(@Param("goodsId") Integer goodsId,@Param("customerId") Integer customerId);
 }

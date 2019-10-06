@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import java.io.Serializable;
 import java.util.Date;
 
+import io.swagger.models.auth.In;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
@@ -165,6 +166,42 @@ public class GoodsOrder implements Serializable {
     @TableField("version")
     private Integer version;
 
+    /**
+     * 总赠豆
+     */
+    @TableField("sum_with_beans")
+    private BigDecimal sumWithBeans;
+
+    /**
+     * 总拍豆
+     */
+    @TableField("sum_beans")
+    private BigDecimal sumBeans;
+
+    /**
+     * 轮次
+     */
+    @TableField("rounds")
+    private Integer rounds;
+
+    /**
+     * 是否转拍
+     */
+    @TableField("is_shipments")
+    private Integer isShipments;
+
+    /**
+     * 转卖金额
+     */
+    @TableField("resell_num")
+    private BigDecimal resellNum;
+
+    /**
+     * 转卖剩余次数
+     */
+    @TableField("resell_size")
+    private Integer resellSize;
+
     @Override
     public String toString() {
         return "GoodsOrder{" +
@@ -191,6 +228,12 @@ public class GoodsOrder implements Serializable {
                 ", createTime=" + createTime +
                 ", updateTime=" + updateTime +
                 ", version=" + version +
+                ", sumWithBeans=" + sumWithBeans +
+                ", sumBeans=" + sumBeans +
+                ", rounds=" + rounds +
+                ", isShipments=" + isShipments +
+                ", resellNum=" + resellNum +
+                ", resellSize=" + resellSize +
                 '}';
     }
 }

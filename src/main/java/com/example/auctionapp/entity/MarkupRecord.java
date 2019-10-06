@@ -35,12 +35,6 @@ public class MarkupRecord implements Serializable {
     private String orderNumber;
 
     /**
-     * 佣金状态 0:未支付 1:已支付 2:已退回
-     */
-    @TableField("cms_status")
-    private Integer cmsStatus;
-
-    /**
      * 卖场id
      */
     @TableField("field_id")
@@ -83,10 +77,16 @@ public class MarkupRecord implements Serializable {
     private BigDecimal bond;
 
     /**
-     * 佣金
+     * 佣金-拍豆
      */
     @TableField("commission")
     private BigDecimal commission;
+
+    /**
+     * 佣金状态 0:未支付 1:已支付 2:已退回
+     */
+    @TableField("cms_status")
+    private Integer cmsStatus;
 
     /**
      * 优惠金额
@@ -141,6 +141,12 @@ public class MarkupRecord implements Serializable {
      */
     @TableField("version")
     private Integer version;
+
+    /**
+     * 赠豆
+     */
+    @TableField("with_beans")
+    private BigDecimal withBeans;
 
 
 }

@@ -2,6 +2,7 @@ package com.example.auctionapp.dao;
 
 import com.example.auctionapp.entity.MarkupRecord;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.example.auctionapp.entity.ext.MarkupRecordClassify;
 import com.example.auctionapp.entity.ext.MarkupRecordSummary;
 import com.example.auctionapp.entity.ext.ShareProfit;
 import org.apache.ibatis.annotations.Param;
@@ -28,14 +29,6 @@ public interface MarkupRecordMapper extends BaseMapper<MarkupRecord> {
      * @return
      */
     MarkupRecordSummary selectSummaryByGoodsId(Integer goodsId);
-
-    /**
-     * 根据拍品id 和 用户id 查询该用户拍卖汇总信息
-     * @param goodsId
-     * @param userId
-     * @return
-     */
-    MarkupRecordSummary selectSummaryByGoodsIdAndUserId(@Param("goodsId")Integer goodsId, @Param("userId")Integer userId);
 
     /**
      * 根据拍品ID和出价查询加价记录列表
@@ -81,4 +74,37 @@ public interface MarkupRecordMapper extends BaseMapper<MarkupRecord> {
      * @return
      */
     Map<String,Object> getNowMarkupHisInfo(@Param("userId") Integer userId,@Param("goodsId") Integer goodsId);
+
+    /**
+     * @description 根据拍品编号和用户编号查询加价表汇总信息
+     * @author mengjia
+     * @date 2019/10/6
+     * @param goodsId 拍品编号
+     * @param userId 用户编号
+     * @return com.example.auctionapp.entity.ext.MarkupRecordSummary
+     * @throws
+     **/
+    MarkupRecordSummary selectSummaryByGoodsIdAndUserId(@Param("goodsId")Integer goodsId, @Param("userId")Integer userId);
+
+    /**
+     * @description 按照拍品编号和用户编号批量删除加价表记录
+     * @author mengjia
+     * @date 2019/10/6
+     * @param goodsId 拍品编号
+     * @param userId 用户编号
+     * @return java.lang.Integer
+     * @throws
+     **/
+    Integer deleteByGoodsIdAndUserId(@Param("goodsId")Integer goodsId,@Param("userId")Integer userId);
+
+    /**
+     * @description 根据拍品编号和用户编号查询加价表分类汇总信息
+     * @author mengjia
+     * @date 2019/10/6
+     * @param goodsId 拍品编号
+     * @param userId 用户编号
+     * @return com.example.auctionapp.entity.ext.MarkupRecordClassify
+     * @throws
+     **/
+    MarkupRecordClassify selectClassifyByGoodsIdAndUserId(@Param("goodsId")Integer goodsId, @Param("userId")Integer userId);
 }

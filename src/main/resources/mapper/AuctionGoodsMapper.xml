@@ -456,4 +456,7 @@
             , INTERVAL 7 DAY) &lt;= DATE (mr.create_time)*/
            order by gor.create_time DESC
     </select>
+    <update id="updateRoundsById" parameterType="com.example.auctionapp.entity.AuctionGoods">
+      update auction_goods set rounds = #{rounds} where id = #{id};
+    </update>
 </mapper>

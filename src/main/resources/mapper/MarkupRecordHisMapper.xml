@@ -24,14 +24,19 @@
         <result column="create_time" property="createTime" />
         <result column="update_time" property="updateTime" />
         <result column="version" property="version" />
+        <result column="with_beans" property="withBeans"/>
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
-        id, order_number,cms_status, goods_id, current_bid, total_number, shooting_times, user_id, bond, commission, coupons, coupons_type, pay_amount, pay_type, status, remark, create_time, update_time, version
+        id, order_number,cms_status, goods_id, current_bid, total_number, shooting_times, user_id, bond, commission, coupons, coupons_type, pay_amount, pay_type, status, remark, create_time, update_time, version,with_beans
     </sql>
 
     <insert id="batInsert" >
         insert into markup_record_his (select * from markup_record where goods_id = #{goodsId,jdbcType=TINYINT});
+    </insert>
+
+    <insert id="winnerCarryforward" parameterType="com.example.auctionapp.entity.MarkupRecordHis">
+        insert into markup_record_his (select * from markup_record where goods_id = #{goodsId,jdbcType=TINYINT} and user_id = #{userId,jdbcType=TINYINT});
     </insert>
 </mapper>

@@ -24,11 +24,12 @@
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="version" property="version"/>
+        <result column="with_beans" property="withBeans"/>
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
-        id, order_number, cms_status, field_id, goods_id, current_bid, total_number, shooting_times, user_id, bond, commission, coupons, coupons_type, pay_amount, pay_type, status, remark, create_time, update_time, version
+        id, order_number, cms_status, field_id, goods_id, current_bid, total_number, shooting_times, user_id, bond, commission, coupons, coupons_type, pay_amount, pay_type, status, remark, create_time, update_time, version,with_beans
     </sql>
 
     <!-- 查询出 拍品id 当前出价最高值 参拍总次数 保证金总数 佣金 总优惠金额  -->
@@ -45,6 +46,7 @@
         GROUP BY goods_id;
     </select>
 
+    <!-- 查询出 拍品id 当前出价最高值 参拍总次数 用户参拍总次数 保证金总数 佣金总数 总优惠金额  -->
     <select id="selectSummaryByGoodsIdAndUserId" resultType="com.example.auctionapp.entity.ext.MarkupRecordSummary">
         SELECT goods_id            as goodsId,
                user_id             as userId,
@@ -115,5 +117,28 @@
                      (select * from markup_record_his where goods_id = #{goodsId} order by current_bid desc, id asc) AS
                      t) sort
         where sort.user_id = #{userId}
+    </select>
+
+    <delete id="deleteByGoodsIdAndUserId">
+        delete
+        from markup_record
+        where goods_id = #{goodsId,jdbcType=TINYINT}
+               and user_id = #{userId,jdbcType=TINYINT};
+    </delete>
+
+    <!-- 查询出 拍品id 当前出价最高值 参拍总次数 用户参拍总次数  佣金总数 总赠豆 总拍豆（佣金总额 + 总赠豆） -->
+    <select id="selectClassifyByGoodsIdAndUserId" resultType="com.example.auctionapp.entity.ext.MarkupRecordClassify">
+        SELECT goods_id  as goodsId,
+        max(current_bid)  as maxCurrentBid,
+        max(total_number) as maxTotalNumber,
+        max(shooting_times) as maxShootingTimes,
+        sum(commission)   as sumCommission,
+        sum(with_beans) as sumWithBeans,
+        sum(commission) + sum(with_beans) as sumBeans
+        FROM markup_record
+        WHERE cms_status = 1
+          and goods_id = #{goodsId,jdbcType=TINYINT}
+          and user_id = #{userId,jdbcType=TINYINT}
+        GROUP BY goods_id, user_id;
     </select>
 </mapper>

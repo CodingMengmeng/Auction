@@ -27,11 +27,18 @@
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="version" property="version"/>
+        <result column="sum_with_beans" property="sumWithBeans"/>
+        <result column="sum_beans" property="sumBeans"/>
+        <result column="rounds" property="rounds"/>
+        <result column="is_shipments" property="isShipments"/>
+        <result column="resell_num" property="resellNum"/>
+        <result column="resell_size" property="resellSize"/>
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
-        id, customer_id, order_number, transaction_number, payment_time, goods_id, bond, bond_channel, total_number, total_number_all, reference_commission_all, reference_commission, preferential_amount, actual_payment, tail_amount, tail_amount_channel, logistics_info, address_id, status, remark, create_time, update_time, version
+        id, customer_id, order_number, transaction_number, payment_time, goods_id, bond, bond_channel, total_number, total_number_all, reference_commission_all, reference_commission, preferential_amount, actual_payment, tail_amount, tail_amount_channel, logistics_info, address_id, status, remark, create_time, update_time, version,
+        sum_with_beans,sum_beans,rounds,is_shipments,resell_num,resell_size
     </sql>
 
 

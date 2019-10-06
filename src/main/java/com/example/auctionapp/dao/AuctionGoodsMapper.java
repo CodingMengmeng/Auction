@@ -147,5 +147,7 @@ public interface AuctionGoodsMapper extends BaseMapper<AuctionGoods> {
      */
     List<Map<String, Object>> selectRandomAuctionGoods(List<Integer> id);
 
+    Integer updateRoundsById(AuctionGoods auctionGoods);
+
 
 }

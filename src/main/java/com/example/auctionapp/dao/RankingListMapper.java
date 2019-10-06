@@ -65,5 +65,7 @@ public interface RankingListMapper extends BaseMapper<RankingList> {
      **/
     Integer updateWinRate(RankingList rankingList);
 
+    Integer deleteByGoodsIdAndCustomerId(@Param("goodsId") Integer goodsId,@Param("customerId") Integer customerId);
+
 
 }

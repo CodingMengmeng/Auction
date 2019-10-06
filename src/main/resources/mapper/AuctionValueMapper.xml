@@ -29,4 +29,11 @@
         FROM auction_value
         WHERE customer_id = #{customerId} and goods_id = #{goodsId};
     </select>
+
+    <delete id="deleteByGoodsIdAndCustomerId">
+        delete
+        from auction_value
+        where goods_id = #{goodsId}
+        and customer_id = #{customerId};
+    </delete>
 </mapper>

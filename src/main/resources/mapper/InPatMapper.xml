@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.InPatMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.InPat">
+        <id column="id" property="id" />
+        <id column="customer_id" property="customerId" />
+        <id column="goods_id" property="goodsId" />
+        <id column="bid_price" property="bid_price" />
+        <id column="consume_beans" property="consume_beans" />
+        <id column="consume_give" property="consume_give" />
+        <id column="customer_value" property="customer_value" />
+        <id column="friend_help" property="friend_help" />
+        <id column="create_time" property="create_time" />
+        <id column="update_time" property="update_time" />
+        <id column="version" property="version" />
+    </resultMap>
+</mapper>

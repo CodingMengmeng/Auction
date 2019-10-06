@@ -17,6 +17,7 @@ import com.example.auctionapp.entity.BrowseRecord;
 import com.example.auctionapp.entity.FollowRecord;
 import com.example.auctionapp.dao.*;
 import com.example.auctionapp.entity.*;
+import com.example.auctionapp.entity.ext.MarkupRecordClassify;
 import com.example.auctionapp.entity.ext.MarkupRecordSummary;
 import com.example.auctionapp.service.IAuctionGoodsService;
 import com.example.auctionapp.service.IMarkupRecordHisService;
@@ -27,6 +28,7 @@ import com.example.auctionapp.vo.AuctionGoodsVO;
 import com.example.auctionapp.vo.BadgeCustomerVo;
 import com.example.auctionapp.vo.BidInfoVo;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.ibatis.jdbc.Null;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import com.example.auctionapp.entity.AuctionGoods;
@@ -87,6 +89,18 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
 
     @Resource
     private RankingListMapper rankingListMapper;
+
+    @Resource
+    private MarkupRecordHisMapper markupRecordHisMapper;
+
+    @Resource
+    private InPatMapper inPatMapper;
+
+    @Resource
+    private ShareMapper shareMapper;
+
+    @Resource
+    private ShareHistoryMapper shareHistoryMapper;
 
     /**
      * 查询正在拍卖的拍品
@@ -359,7 +373,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
      * @return java.lang.String
      * @throws
      **/
-    private String updateOrInsertAuctionValueData(BidInfoVo bidInfoVo,List<BadgeCustomerVo> badgeCustomerInfos){
+    private void updateOrInsertAuctionValueData(BidInfoVo bidInfoVo,List<BadgeCustomerVo> badgeCustomerInfos){
         //根据用户id和拍品id获取拍卖值信息
         AuctionValue auctionValueVo = auctionValueMapper.selectAuctionValueInfoById(bidInfoVo.getCustomerId(),bidInfoVo.getGoodsId());
         //根据用户id和拍品id获取排行信息
@@ -430,7 +444,6 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             rankingListVo.setUpdateTime(LocalDateTime.now());
             rankingListVo.setVersion(1);
             rankingListMapper.insert(rankingListVo);
-            return "新增成功";
         }else{
             //更新拍卖值表
 
@@ -471,23 +484,20 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
                     )));
             //更新排行表中的拍卖值
             rankingListMapper.updateGoodsValue(rankingListPo);
-
-            //重新更新排行
-            //1、获取该拍品的所有记录（已按拍卖值大小排序）
-            List<RankingList> rankingLists = rankingListMapper.selectByGoodsId(bidInfoVo.getGoodsId());
-            //2、判断是否为多条，多条则依次更新rank，否则跳过更新
-            if(rankingLists.size() > 1){
-                //3、根据拍品ID和客户ID依次更新排行rank字段
-                for(int seq = 1;seq <= rankingLists.size();seq++){
-                    rankingLists.get(seq - 1).setRank(seq);
-                    rankingLists.get(seq - 1).setUpdateTime(LocalDateTime.now());
-                    rankingListMapper.updateRank(rankingLists.get(seq - 1));
-                }
-            }else{
-                log.info("don't need to update rank for goods_id = " + bidInfoVo.getGoodsId());
+        }
+        //重新更新排行
+        //1、获取该拍品的所有记录（已按拍卖值大小排序）
+        List<RankingList> rankingLists = rankingListMapper.selectByGoodsId(bidInfoVo.getGoodsId());
+        //2、判断是否为多条，多条则依次更新rank，否则跳过更新
+        if(rankingLists.size() > 1){
+            //3、根据拍品ID和客户ID依次更新排行rank字段
+            for(int seq = 1;seq <= rankingLists.size();seq++){
+                rankingLists.get(seq - 1).setRank(seq);
+                rankingLists.get(seq - 1).setUpdateTime(LocalDateTime.now());
+                rankingListMapper.updateRank(rankingLists.get(seq - 1));
             }
-
-            return "更新成功";
+        }else{
+            log.info("don't need to update rank for goods_id = " + bidInfoVo.getGoodsId());
         }
     }
 
@@ -537,12 +547,10 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
      * @return void
      * @throws
      **/
-    private void insertMarkupRecord(BidInfoVo bidInfoVo) {
+    private void insertMarkupRecord(BidInfoVo bidInfoVo,MarkupRecordSummary markupRecordSummary) {
 
-        MarkupRecordSummary markupRecordSummary = markupRecordMapper.selectSummaryByGoodsId(bidInfoVo.getGoodsId());
         MarkupRecord markupRecord = new MarkupRecord();
         //公共部分赋值
-
         //订单编号 order_number
         markupRecord.setOrderNumber(ProjectConstant.GOODS_AUCTION + DateTimeUtil.getNowInSS() + bidInfoVo.getCustomerId());
         //商品ID goods_id
@@ -584,9 +592,9 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             markupRecord.setTotalNumber(1);
             //用户参拍次数 shooting_times
             markupRecord.setShootingTimes(1);
-            //定金金额/保证金 bond
-            //用户首次参拍时需缴纳，与支付佣金相同
-            markupRecord.setBond(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
+//            //定金金额/保证金 bond
+//            //用户首次参拍时需缴纳，与支付佣金相同
+//            markupRecord.setBond(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
         }else{
             //获取该商品ID的参拍总次数
             int totalNumber = markupRecordSummary.getMaxTotalNumber();
@@ -596,21 +604,20 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             if(markupRecordSummary == null){
                 //用户参拍次数 shooting_times
                 markupRecord.setShootingTimes(1);
-                //定金金额/保证金 bond
-                markupRecord.setBond(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
+//                //定金金额/保证金 bond
+//                markupRecord.setBond(Optional.ofNullable(bidInfoVo.getActualPayBeans()).orElse(new BigDecimal("0.00")));
             }else{
                 //获取该用户该商品的已参拍次数
                 int shootingTimes = markupRecordSummary.getMaxShootingTimes();
                 //用户参拍次数 shooting_times
                 markupRecord.setShootingTimes(shootingTimes + 1);
-                //定金金额/保证金 bond
-                markupRecord.setBond(CalcUtils.ZERO);
+//                //定金金额/保证金 bond
+//                markupRecord.setBond(CalcUtils.ZERO);
             }
         }
 
-        //实际支付金额：保证金 + 支付佣金 - 优惠金额 pay_amount
-        markupRecord.setPayAmount(markupRecord.getBond()
-                .add(markupRecord.getCommission()).subtract(markupRecord.getCoupons()));
+        //实际支付金额：支付佣金 - 优惠金额 pay_amount
+        markupRecord.setPayAmount(markupRecord.getCommission().subtract(markupRecord.getCoupons()));
         log.info("入库加价记录：" + markupRecord);
         markupRecordMapper.insert(markupRecord);
     }
@@ -687,8 +694,159 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         transLogMapper.insert(transLog);
     }
 
+    /**
+     * @description 处理拍中后的入库逻辑，包括订单表、拍品表、中拍记录表、消息表
+     * @author mengjia
+     * @date 2019/10/6
+     * @param bidInfoVo
+     * @return void
+     * @throws
+     **/
+    private void dealWinnerStorage(BidInfoVo bidInfoVo){
+        //入库订单表
+
+        //取出加价表中的分类汇总信息，包括：
+        //最高出价、参拍总次数、总佣金-消耗拍豆、用户参拍总次数、
+        //总赠豆、总拍豆
+        MarkupRecordClassify markupRecordClassify = markupRecordMapper.selectClassifyByGoodsIdAndUserId(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
+        //取出拍卖值表中的信息
+        //包括拍中者的消耗拍豆、消耗赠豆
+        AuctionValue auctionValueVo = auctionValueMapper.selectAuctionValueInfoById(bidInfoVo.getCustomerId(),bidInfoVo.getGoodsId());
+//        if(markupRecordClassify == null
+//                || auctionValueVo == null){
+//            throw new RuntimeException("加价表记录或拍卖值表记录为空，拍品编号为" + bidInfoVo.getGoodsId()
+//            + ",用户编号为" + bidInfoVo.getCustomerId());
+//        }
+        //入库订单表
+        GoodsOrder goodsOrder = new GoodsOrder();
+        //订单编号 order_number
+        goodsOrder.setOrderNumber(ProjectConstant.GOODS_ORDER + DateTimeUtil.getNowInSS() + bidInfoVo.getCustomerId());
+        //拍中者ID customer_id
+        goodsOrder.setCustomerId(bidInfoVo.getCustomerId());
+        //拍品编号 goods_id
+        goodsOrder.setGoodsId(bidInfoVo.getGoodsId());
+        //参拍次数 total_number
+        goodsOrder.setTotalNumber(markupRecordClassify.getMaxShootingTimes());
+        //总参拍次数 total_number_all
+        goodsOrder.setTotalNumberAll(markupRecordClassify.getMaxTotalNumber());
+        //总参拍佣金 reference_commission_all
+        goodsOrder.setReferenceCommissionAll(markupRecordClassify.getSumCommission());
+        //参拍佣金-消耗拍豆 reference_commission
+        goodsOrder.setReferenceCommission(auctionValueVo.getConsumeBeans());
+        //优惠金额-消耗赠豆 preferential_amount
+        goodsOrder.setPreferentialAmount(auctionValueVo.getConsumeGive());
+        //尾款金额-喊价金额 tail_amount
+        goodsOrder.setTailAmount(bidInfoVo.getBidPrice());
+        //状态 status 0-待支付
+        goodsOrder.setStatus(0);
+        //总赠豆 sum_with_beans
+        goodsOrder.setSumWithBeans(markupRecordClassify.getSumWithBeans());
+        //总拍豆 sum_beans
+        goodsOrder.setSumBeans(markupRecordClassify.getSumBeans());
+
+        //获取拍品表信息
+        AuctionGoods auctionGoods = auctionGoodsMapper.selectById(bidInfoVo.getGoodsId());
+        log.info(auctionGoods.toString());
+        int rounds = auctionGoods.getRounds() + 1;
+        auctionGoods.setRounds(rounds);
+        //拍品表中指定拍品的轮次 + 1
+        auctionGoodsMapper.updateRoundsById(auctionGoods);
+        //轮次 rounds
+        goodsOrder.setRounds(rounds);
+        //是否转拍 is_shipments 0-待操作
+        goodsOrder.setIsShipments(0);
+        //转卖剩余次数 resell_size 固定为3次
+        goodsOrder.setResellSize(3);
+        goodsOrderMapper.insert(goodsOrder);
+
+        //入库中拍记录表
+        InPat inPat = new InPat();
+        //客户编号 customer_id
+        inPat.setCustomerId(bidInfoVo.getCustomerId());
+        //拍品编号 goods_id
+        inPat.setGoodsId(bidInfoVo.getGoodsId());
+        //出价金额 bid_price
+        inPat.setBidPrice(bidInfoVo.getBidPrice());
+        //支付拍豆 consume_beans
+        inPat.setConsumeBeans(auctionValueVo.getConsumeBeans());
+        //支付赠豆 consume_give
+        inPat.setConsumeGive(auctionValueVo.getConsumeGive());
+        //拍卖值 customer_value
+        inPat.setCustomerValue(auctionValueVo.getCustomerValue());
+        //好友助力 friend_help
+        inPat.setFriendHelp(auctionValueVo.getFriendValue());
+        //创建时间 create_time
+        inPat.setCreateTime(LocalDateTime.now());
+        //修改时间 update_time
+        inPat.setUpdateTime(LocalDateTime.now());
+        inPatMapper.insert(inPat);
+
+        //入库消息表
+        Message message = new Message();
+        //账户类型 type 1-系统消息
+        message.setType(1);
+        //拍品ID goods_id
+        message.setGoodsId(bidInfoVo.getGoodsId());
+        //主体id subject_id
+        message.setSubjectId(bidInfoVo.getCustomerId());
+        //消息内容 message_info
+        return;
+    }
+    /**
+     * @description 处理拍中后的结转，包括加价表的清空和结转、好友助力拍卖值表的清空和结转、拍卖值表的清空，排行表的清空
+     * @author mengjia
+     * @date 2019/10/6
+     * @param goodsId 拍品编号
+     * @param customerId 拍中用户编号
+     * @return void
+     * @throws
+     **/
+    private void dealWinnerCarryforward(Integer goodsId, Integer customerId) {
+        //处理加价表
+        //结转至历史表
+        int affectedNum;
+        MarkupRecordHis markupRecordHis = new MarkupRecordHis();
+        markupRecordHis.setGoodsId(goodsId);
+        markupRecordHis.setUserId(customerId);
+        affectedNum = markupRecordHisMapper.winnerCarryforward(goodsId,customerId);
+        log.info("加价表结转：" + "已结转拍中者" + customerId + "的" + affectedNum + "条记录至历史表。");
+        //清空
+        markupRecordMapper.deleteByGoodsIdAndUserId(goodsId,customerId);
+
+        //处理好友助力拍卖值表
+        //结转至历史表
+        affectedNum = shareHistoryMapper.winnerCarryforward(goodsId,customerId);
+        log.info("好友助力拍卖值表结转：" + "已结转拍中者" + customerId + "的" + affectedNum + "条记录至历史表。");
+        //清空
+        shareMapper.deleteByGoodsIdAndCustomerId(goodsId,customerId);
+
+        //处理拍卖值表
+        //清空
+        affectedNum = auctionValueMapper.deleteByGoodsIdAndCustomerId(goodsId,customerId);
+        log.info("已删除拍卖值表" + customerId + "的" + affectedNum + "条记录");
+
+        //处理排行表
+        //清空
+        affectedNum = rankingListMapper.deleteByGoodsIdAndCustomerId(goodsId,customerId);
+        log.info("已删除排行表" + customerId + "的" + affectedNum + "条记录");
+        //重新计算排行
+        //1、获取该拍品的所有记录（已按拍卖值大小排序）
+        List<RankingList> rankingLists = rankingListMapper.selectByGoodsId(goodsId);
+        //2、判断是否为多条，多条则依次更新rank，否则跳过更新
+        if(rankingLists.size() > 1){
+            //3、根据拍品ID和客户ID依次更新排行rank字段
+            for(int seq = 1;seq <= rankingLists.size();seq++){
+                rankingLists.get(seq - 1).setRank(seq);
+                rankingLists.get(seq - 1).setUpdateTime(LocalDateTime.now());
+                rankingListMapper.updateRank(rankingLists.get(seq - 1));
+            }
+        }else{
+            log.info("don't need to update rank for goods_id = " + goodsId);
+        }
+
+    }
     @Override
-    @Transactional
+    @Transactional(rollbackFor = RuntimeException.class, timeout = 5)
     public Result processBid(BidInfoVo bidInfoVo){
         if(bidInfoVo.getActualPayBeans().compareTo(CalcUtils.ZERO) == 0
                 && bidInfoVo.getMortgageFreeBean().compareTo(CalcUtils.ZERO) == 0){
@@ -727,12 +885,19 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
                 badgeCustomerMapper.insert(badgeCustomer);
             }
             //入库加价表
-            insertMarkupRecord(bidInfoVo);
+            MarkupRecordSummary markupRecordSummary = markupRecordMapper.selectSummaryByGoodsId(bidInfoVo.getGoodsId());
+            insertMarkupRecord(bidInfoVo,markupRecordSummary);
             //入库交易流水
             insertTransLog(bidInfoVo);
+            //处理拍中后的入库
+            //包括订单表、拍品表、中拍记录表、消息表
+            dealWinnerStorage(bidInfoVo);
+            //处理拍中后的结转
+            dealWinnerCarryforward(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
             return ResultGenerator.genSuccessResult();
         }else{
             return ResultGenerator.genFailResult("出价失败");
         }
     }
+
 }

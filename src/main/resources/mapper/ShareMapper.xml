@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.auctionapp.dao.ShareMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.auctionapp.entity.Share">
+        <id column="id" property="id"/>
+        <result column="customer_id" property="customerId"/>
+        <result column="goods_id" property="goodsId"/>
+        <result column="by_customers_id" property="byCustomersId"/>
+        <result column="help_value" property="helpValue"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="version" property="version"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id,customer_id,goods_id,by_customers_id,help_value,create_time,update_time,version
+    </sql>
+
+    <delete id="deleteByGoodsIdAndCustomerId">
+        delete
+        from share
+        where goods_id = #{goodsId,jdbcType=TINYINT}
+        and customer_id = #{customerId,jdbcType=TINYINT};
+    </delete>
+</mapper>

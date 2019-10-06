@@ -49,4 +49,11 @@
         update ranking_list set win_rate = #{winRate}
         where goods_id = #{goodsId} and customer_id = #{customerId};
     </update>
+
+    <delete id="deleteByGoodsIdAndCustomerId">
+        delete
+        from ranking_list
+        where goods_id = #{goodsId,jdbcType=TINYINT}
+        and customer_id = #{customerId,jdbcType=TINYINT};
+    </delete>
 </mapper>
