@@ -29,7 +29,13 @@ public interface DealMapper extends BaseMapper<AuctionGoods> {
    BigDecimal selectAgentProportion(@Param("customer_id") int customer_id);
    //查询固定返佣比例
    BigDecimal selectProfitModulProportion(@Param("commission") BigDecimal commission);
-
+   //更新总排豆值
    Integer updateBeansPonds(@Param("beansPond") BigDecimal beansPond,@Param("auctionGoodsId") int auctionGoodsId);
+   //查询总拍豆
+   BigDecimal selectBeansPond(@Param("auctionGoodsId") int auctionGoodsId);
+   //更新用户返佣
+   Integer updateCustomerCommision(@Param("customerCommision") BigDecimal customerCommision,@Param("auctionGoodsId") int auctionGoodsId);
+
+
 
 }

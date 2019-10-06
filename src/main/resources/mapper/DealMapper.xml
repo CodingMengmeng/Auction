@@ -34,4 +34,12 @@
         update auction_goods set beans_pond = #{beansPond} where id = #{auctionGoodsId};
     </update>
 
+    <select id="selectBeansPond" resultType="java.math.BigDecimal">
+        select beans_pond from pat_sell.auction_goods ag where ag.id=#{auctionGoodsId}
+    </select>
+
+    <update id="updateCustomerCommision" >
+        update auction_goods set customer_commision = #{customerCommision} where id = #{auctionGoodsId};
+    </update>
+
 </mapper>
