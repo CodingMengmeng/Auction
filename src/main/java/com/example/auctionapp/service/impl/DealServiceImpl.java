@@ -3,6 +3,7 @@ package com.example.auctionapp.service.impl;
 import com.example.auctionapp.core.ProjectConstant;
 import com.example.auctionapp.dao.DealMapper;
 import com.example.auctionapp.dao.TransLogMapper;
+import com.example.auctionapp.entity.AuctionGoodsDealInfo;
 import com.example.auctionapp.entity.TransLog;
 import com.example.auctionapp.service.IDealService;
 import com.example.auctionapp.util.DateTimeUtil;
@@ -56,14 +57,14 @@ public class DealServiceImpl implements IDealService {
             }
             //3、两个利润公式
             //3.1利润公式1：出价+总排豆>=成本+利润
-            List<DealConditionVo> dealConditionVo = dealMapper.selectDealInfoById(auctionGoodsId);
+            AuctionGoodsDealInfo auctionGoodsDealInfo = dealMapper.selectDealInfoById(auctionGoodsId);
             BigDecimal profit=null;//利润
             BigDecimal cost=null;//成本
             BigDecimal beans_pond=null;//总拍豆
-            if(dealConditionVo!=null){
-                profit = dealConditionVo.get(0).getProfit();
-                cost = dealConditionVo.get(0).getCost();
-                beans_pond = dealConditionVo.get(0).getBeans_pond();
+            if(auctionGoodsDealInfo!=null){
+                profit = auctionGoodsDealInfo.getProfit();
+                cost = auctionGoodsDealInfo.getCost();
+                beans_pond = auctionGoodsDealInfo.getBeansPond();
             }else{
                 throw new Exception("该商品拍品表参数为空,商品id为"+auctionGoodsId);
             }
@@ -85,13 +86,6 @@ public class DealServiceImpl implements IDealService {
         }else{
            throw new Exception("该商品最小成交参数为空,商品id为"+auctionGoodsId);
         }
-    }
-
-
-    public List<DealConditionVo> getdealConditionInfo(int auctionGoodsId) {
-
-       return dealMapper.selectDealInfoById(auctionGoodsId);
-
     }
 
     //按拍卖值降序排序器
@@ -213,11 +207,12 @@ public class DealServiceImpl implements IDealService {
     public int executeAgentCommision(int concluedCustomerId,int goodsId){
         //1、计算佣金
          //返佣基数-
-        BigDecimal commisionBaseAmount = dealMapper.selectDealInfoById(goodsId).get(0).getBeans_pond();
+        AuctionGoodsDealInfo auctionGoodsDealInfo = dealMapper.selectDealInfoById(goodsId);
+        BigDecimal beansPond = auctionGoodsDealInfo.getBeansPond();
         //用户支付佣金
         BigDecimal totalPayedBeans = dealMapper.selectTotalPayedBeans(goodsId,concluedCustomerId);
         //返佣基数=总排豆当前值-用户返佣（用户支付拍豆乘2）-平台返佣（用户支付拍豆乘10%）
-        commisionBaseAmount.subtract(totalPayedBeans.multiply(BigDecimal.valueOf(2.1)));
+        BigDecimal commisionBaseAmount = beansPond.subtract(totalPayedBeans.multiply(BigDecimal.valueOf(2.1)));
          //查返佣系数
         //先查agent表的默认比例
         //用customer表和agent表关联
@@ -246,8 +241,8 @@ public class DealServiceImpl implements IDealService {
         transLog.setCommission(commisionAmount);
         transLogMapper.insert(transLog);
         //3、拍品表更新总拍豆--【待修改】
-        commisionBaseAmount.subtract(commisionAmount);
-        if(dealMapper.updateBeansPonds(commisionBaseAmount,goodsId)>0){
+        beansPond = beansPond.subtract(commisionAmount);
+        if(dealMapper.updateBeansPonds(beansPond,goodsId)>0){
             return 1;
         }
         else{
@@ -261,7 +256,7 @@ public class DealServiceImpl implements IDealService {
     public int executePlatformCommision(int concluedCustomerId,int goodsId){
        BigDecimal beansPond =  dealMapper.selectBeansPond(goodsId);
        BigDecimal totalPayedBeans = dealMapper.selectTotalPayedBeans(goodsId,concluedCustomerId);
-       BigDecimal platformCommision = beansPond.subtract(totalPayedBeans.multiply(BigDecimal.valueOf(0.1)));
+       BigDecimal platformCommision = totalPayedBeans.multiply(BigDecimal.valueOf(0.1));
         // 流水表插入记录
         TransLog transLog = new TransLog();
         transLog.setOrderNumber(ProjectConstant.SHARE_PROFIT + DateTimeUtil.getNowInSS() + concluedCustomerId);
@@ -280,11 +275,11 @@ public class DealServiceImpl implements IDealService {
             return 0;
         }
         //总拍豆减去平台佣金
-        if(dealMapper.updateBeansPonds(platformCommision,goodsId)<=0){
+        if(dealMapper.updateBeansPonds(beansPond.subtract(platformCommision),goodsId)<=0){
             return 0;
         }
         else{
-            return 0;
+            return 1;
         }
     }
 
@@ -294,9 +289,13 @@ public class DealServiceImpl implements IDealService {
     public int executeCustomerCommision(int concluedCustomerId,int goodsId) {
         //拍品表新加一个冻结的排豆的字段，入用户佣金。然后总拍豆减去冻结的排豆
         BigDecimal totalPayedBeans = dealMapper.selectTotalPayedBeans(goodsId,concluedCustomerId);
-         
-        updateCustomerCommision();
-
+        BigDecimal customerCommision = totalPayedBeans.multiply(BigDecimal.valueOf(2));
+        BigDecimal beansPond =  dealMapper.selectBeansPond(goodsId);
+        if(dealMapper.updateCustomerCommision(beansPond.subtract(customerCommision),customerCommision,goodsId)>0){
+            return 1;
+        }else{
+            return 0;
+        }
     }
 
 

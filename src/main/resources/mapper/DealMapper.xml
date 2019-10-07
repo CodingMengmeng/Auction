@@ -14,10 +14,6 @@
       select sum(current_bid) from pat_sell.markup_record mr where mr.goods_id=#{auctionGoodsId} and mr.user_id=#{customer_id}
     </select>
 
-    <select id="selectDealInfoById" resultType="com.example.auctionapp.vo.DealConditionVo">
-       select min_section,min_number_people,ag.profit,cost,beans_pond from pat_sell.auction_goods ag where ag.id=#{auctionGoodsId}
-    </select>
-
     <select id="selectTotalPayedBeans" resultType = "java.math.BigDecimal">
         select sum(commission) from pat_sell.markup_record mr where mr.goods_id=#{auctionGoodsId} and mr.user_id=#{customer_id}
     </select>
@@ -39,7 +35,17 @@
     </select>
 
     <update id="updateCustomerCommision" >
-        update auction_goods set customer_commision = #{customerCommision} where id = #{auctionGoodsId};
+        update auction_goods set customer_commision = #{customerCommision},beans_pond = #{beansPond} where id = #{auctionGoodsId};
     </update>
 
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        min_section,min_number_people,profit,cost,beans_pond
+    </sql>
+
+    <select id="selectDealInfoById" resultType="com.example.auctionapp.entity.AuctionGoodsDealInfo">
+        select
+        <include refid="Base_Column_List"/>
+        from pat_sell.auction_goods ag where ag.id=#{auctionGoodsId}
+    </select>
 </mapper>

@@ -18,7 +18,6 @@ public interface IDealService {
     * */
     public DealConcluedVo isDealConclued(int auctionGoodsId) throws Exception;
 
-    public List<DealConditionVo> getdealConditionInfo(int auctionGoodsId);
     //计算拍中几率函数
     public List<WinRateResponseVo> calWinRate(List<WinRateRequestVo> winRateRequestVoList);
     //代理返佣函数
