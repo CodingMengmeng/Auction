@@ -102,6 +102,9 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
     @Resource
     private ShareHistoryMapper shareHistoryMapper;
 
+    @Resource
+    private MessageMapper messageMapper;
+
     /**
      * 查询正在拍卖的拍品
      *
@@ -697,21 +700,22 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
     /**
      * @description 处理拍中后的入库逻辑，包括订单表、拍品表、中拍记录表、消息表
      * @author mengjia
-     * @date 2019/10/6
-     * @param bidInfoVo
+     * @date 2019/10/7
+     * @param goodsId 拍品编号
+     * @param customerId 拍中用户编号
      * @return void
      * @throws
      **/
-    private void dealWinnerStorage(BidInfoVo bidInfoVo){
+    private void dealWinnerStorage(Integer goodsId, Integer customerId){
         //入库订单表
 
         //取出加价表中的分类汇总信息，包括：
         //最高出价、参拍总次数、总佣金-消耗拍豆、用户参拍总次数、
         //总赠豆、总拍豆
-        MarkupRecordClassify markupRecordClassify = markupRecordMapper.selectClassifyByGoodsIdAndUserId(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
+        MarkupRecordClassify markupRecordClassify = markupRecordMapper.selectClassifyByGoodsIdAndUserId(goodsId,customerId);
         //取出拍卖值表中的信息
         //包括拍中者的消耗拍豆、消耗赠豆
-        AuctionValue auctionValueVo = auctionValueMapper.selectAuctionValueInfoById(bidInfoVo.getCustomerId(),bidInfoVo.getGoodsId());
+        AuctionValue auctionValueVo = auctionValueMapper.selectAuctionValueInfoById(customerId,goodsId);
 //        if(markupRecordClassify == null
 //                || auctionValueVo == null){
 //            throw new RuntimeException("加价表记录或拍卖值表记录为空，拍品编号为" + bidInfoVo.getGoodsId()
@@ -720,11 +724,11 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         //入库订单表
         GoodsOrder goodsOrder = new GoodsOrder();
         //订单编号 order_number
-        goodsOrder.setOrderNumber(ProjectConstant.GOODS_ORDER + DateTimeUtil.getNowInSS() + bidInfoVo.getCustomerId());
+        goodsOrder.setOrderNumber(ProjectConstant.GOODS_ORDER + DateTimeUtil.getNowInSS() + customerId);
         //拍中者ID customer_id
-        goodsOrder.setCustomerId(bidInfoVo.getCustomerId());
+        goodsOrder.setCustomerId(customerId);
         //拍品编号 goods_id
-        goodsOrder.setGoodsId(bidInfoVo.getGoodsId());
+        goodsOrder.setGoodsId(goodsId);
         //参拍次数 total_number
         goodsOrder.setTotalNumber(markupRecordClassify.getMaxShootingTimes());
         //总参拍次数 total_number_all
@@ -736,7 +740,8 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         //优惠金额-消耗赠豆 preferential_amount
         goodsOrder.setPreferentialAmount(auctionValueVo.getConsumeGive());
         //尾款金额-喊价金额 tail_amount
-        goodsOrder.setTailAmount(bidInfoVo.getBidPrice());
+        //取拍卖值表中的最高出价
+        goodsOrder.setTailAmount(auctionValueVo.getBid());
         //状态 status 0-待支付
         goodsOrder.setStatus(0);
         //总赠豆 sum_with_beans
@@ -745,7 +750,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         goodsOrder.setSumBeans(markupRecordClassify.getSumBeans());
 
         //获取拍品表信息
-        AuctionGoods auctionGoods = auctionGoodsMapper.selectById(bidInfoVo.getGoodsId());
+        AuctionGoods auctionGoods = auctionGoodsMapper.selectById(goodsId);
         log.info(auctionGoods.toString());
         int rounds = auctionGoods.getRounds() + 1;
         auctionGoods.setRounds(rounds);
@@ -762,11 +767,12 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         //入库中拍记录表
         InPat inPat = new InPat();
         //客户编号 customer_id
-        inPat.setCustomerId(bidInfoVo.getCustomerId());
+        inPat.setCustomerId(customerId);
         //拍品编号 goods_id
-        inPat.setGoodsId(bidInfoVo.getGoodsId());
+        inPat.setGoodsId(goodsId);
         //出价金额 bid_price
-        inPat.setBidPrice(bidInfoVo.getBidPrice());
+        //取拍卖值表中的最高出价
+        inPat.setBidPrice(auctionValueVo.getBid());
         //支付拍豆 consume_beans
         inPat.setConsumeBeans(auctionValueVo.getConsumeBeans());
         //支付赠豆 consume_give
@@ -786,11 +792,19 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         //账户类型 type 1-系统消息
         message.setType(1);
         //拍品ID goods_id
-        message.setGoodsId(bidInfoVo.getGoodsId());
+        message.setGoodsId(goodsId);
         //主体id subject_id
-        message.setSubjectId(bidInfoVo.getCustomerId());
+        message.setSubjectId(customerId);
         //消息内容 message_info
-        return;
+        message.setMessageInfo("用户编号" + customerId + "以" + auctionValueVo.getBid()
+                + "的价格拍中了" + auctionGoods.getGoodsName() + "!");
+        //发送标志 0-未发送
+        message.setSendFlag(0);
+        //读标志 0-未读
+        message.setReadFlag(0);
+        //账户状态 1-生效
+        message.setStatus(1);
+        messageMapper.insert(message);
     }
     /**
      * @description 处理拍中后的结转，包括加价表的清空和结转、好友助力拍卖值表的清空和结转、拍卖值表的清空，排行表的清空
@@ -891,8 +905,9 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             insertTransLog(bidInfoVo);
             //处理拍中后的入库
             //包括订单表、拍品表、中拍记录表、消息表
-            dealWinnerStorage(bidInfoVo);
+            dealWinnerStorage(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
             //处理拍中后的结转
+            //包括加价表、好友助力表、拍卖值表、排行表
             dealWinnerCarryforward(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
             return ResultGenerator.genSuccessResult();
         }else{
