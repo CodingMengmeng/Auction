@@ -30,10 +30,6 @@ public class DealController {
         return Result.success("hello World:"+id);
     }
 
-    @RequestMapping("/getGoodsIfDealById")
-    public Result getGoodsIfDealById(@RequestHeader("auctionGoodsId")  int auctionGoodsId) {
-        return Result.success(iDealService.getdealConditionInfo(auctionGoodsId));
-    }
 
     @RequestMapping("/getIsDealConcluedById")
     public Result getIsDealConcluedById(@RequestHeader("auctionGoodsId")  int auctionGoodsId) {
@@ -44,14 +40,34 @@ public class DealController {
         }
         return null;
     }
-
     @RequestMapping("/executeAgentCommision")
     public Result executeAgentCommision(@RequestBody BidInfoVo bidInfoVo) {
         try {
-           return Result.success(iDealService.executeAgentCommision(bidInfoVo));
+            return Result.success(iDealService.executeAgentCommision(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId()));
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
+    @RequestMapping("/executePlatformCommision")
+    public Result executePlatformCommision(@RequestBody BidInfoVo bidInfoVo) {
+        try {
+           return Result.success(iDealService.executePlatformCommision(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @RequestMapping("/executeCustomerCommision")
+    public Result executeCustomerCommision(@RequestBody BidInfoVo bidInfoVo) {
+        try {
+            return Result.success(iDealService.executeCustomerCommision(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId()));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
 }
