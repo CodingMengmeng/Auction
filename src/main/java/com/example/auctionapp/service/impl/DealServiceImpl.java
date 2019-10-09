@@ -104,6 +104,15 @@ public class DealServiceImpl implements IDealService {
             return value1.subtract(value2).intValue();
         }
     }
+
+    //按拍卖值降序排序器2
+    public class GoodsValueDescComparator1 implements Comparator<WinRateResponseVo> {
+        public int compare(WinRateResponseVo winRateRequestVo1,WinRateResponseVo winRateRequestVo2){
+            BigDecimal value1 = winRateRequestVo1.getGoodsValue();
+            BigDecimal value2 = winRateRequestVo2.getGoodsValue();
+            return value2.subtract(value1).intValue();
+        }
+    }
       //计算拍中几率接口
       //input：拍卖者id,拍卖值
       //output:拍卖者id，拍卖值，拍中几率
@@ -198,6 +207,8 @@ public class DealServiceImpl implements IDealService {
                       winRateRequestVoList.get(i).getCustomerId(), winRate);
               WinRateResponseList.add(winRateResponseVo);
           }
+          Collections.sort(WinRateResponseList,new GoodsValueDescComparator1());
+
           return WinRateResponseList;
       }
 
