@@ -48,4 +48,9 @@
         <include refid="Base_Column_List"/>
         from pat_sell.auction_goods ag where ag.id=#{auctionGoodsId}
     </select>
+
+    <select id="getWinRateByCustomerId" resultType="java.math.BigDecimal">
+        select win_rate from pat_sell.ranking_list  where customer_id=#{customerId} and goods_id=#{goodsId}
+    </select>
+
 </mapper>

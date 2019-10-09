@@ -298,6 +298,9 @@ public class DealServiceImpl implements IDealService {
         }
     }
 
+    public BigDecimal getWinRateByCustomerId(int customerId,int goodsId){
+        return dealMapper.getWinRateByCustomerId(customerId,goodsId);
+    }
 
         public static void main(String[] args) {
         List<WinRateRequestVo> winRateRequestVoList = new ArrayList<>();

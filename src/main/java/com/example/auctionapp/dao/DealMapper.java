@@ -38,5 +38,7 @@ public interface DealMapper extends BaseMapper<AuctionGoods> {
 
    AuctionGoodsDealInfo selectDealInfoById(@Param("auctionGoodsId") int auctionGoodsId);
 
+   BigDecimal getWinRateByCustomerId(@Param("customerId") int customerId,@Param("goodsId")int goodsId);
+
 
 }

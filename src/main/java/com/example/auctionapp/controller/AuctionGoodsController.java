@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.annotation.Nonnegative;
 import javax.annotation.Resource;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -53,6 +54,9 @@ public class AuctionGoodsController {
 
     @Resource
     IGoodsOrderService goodsOrderService;
+
+    @Resource
+    IDealService iDealService;
 
     /**
      * 根据拍品id查询拍品详情
@@ -367,5 +371,11 @@ public class AuctionGoodsController {
         log.info(bidInfoVo.toString());
         return iAuctionGoodsService.processBid(bidInfoVo);
     }
-
+    //需要用get方式请求
+    @RequestMapping ("/getWinRate")
+    public Result getWinRate(@RequestHeader("userId") Integer userId, Integer auctionGoodsId){
+        System.out.println(userId);
+        System.out.println(auctionGoodsId);
+        return Result.success(iDealService.getWinRateByCustomerId(userId,auctionGoodsId));
+    }
 }

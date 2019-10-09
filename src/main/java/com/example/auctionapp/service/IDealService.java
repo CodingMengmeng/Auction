@@ -30,4 +30,7 @@ public interface IDealService {
     //输入：拍中者id,拍品编号
     public int executeCustomerCommision(int concluedCustomerId,int goodsId);
 
-}
+    //根据用户id、拍品id查询拍中几率
+    public BigDecimal getWinRateByCustomerId(int customerId,int goodsId);
+
+    }
