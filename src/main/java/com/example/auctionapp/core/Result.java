@@ -19,6 +19,9 @@ public class Result<T> {
     private T data;
 
     private static final String DEFAULT_SUCCESS_MESSAGE = "SUCCESS";
+    private static final String BID_FAIL_MESSAGE = "BID_FAIL";
+    private static final String BID_SUCCESS_CONCLUED_FAIL_MESSAGE = "BID_SUCCESS_CONCLUED_FAIL";
+    private static final String BID_SUCCESS_CONCLUED_SUCCESS_MESSAGE = "BID_SUCCESS_CONCLUED_SUCCESS";
 
     /**
      * 响应码枚举，参考HTTP状态码的语义
@@ -53,7 +56,23 @@ public class Result<T> {
         /**
          * 下单委托失败
          */
-        TRADE_ORDER_INSERT_ERROR(6001);
+        TRADE_ORDER_INSERT_ERROR(6001),
+
+        /**
+         * 出价失败
+         */
+        BID_FAIL(7001),
+
+        /**
+         * 出价成功未拍中
+         */
+        BID_SUCCESS_CONCLUED_FAIL(7002),
+
+        /**
+         * 出价成功拍中
+         */
+        BID_SUCCESS_CONCLUED_SUCCESS(7003);
+
         private final int code;
 
         ResultCode(int code) {
@@ -107,4 +126,13 @@ public class Result<T> {
         return new Result<D>().setCode(code).setMessage(message).setData(data);
     }
 
+    public static <D> Result bidFail(D date) {
+        return new Result<D>().setCode(ResultCode.BID_FAIL.code()).setMessage(BID_FAIL_MESSAGE).setData(date);
+    }
+    public static <D> Result bidSuccessConcluedFail(D date) {
+        return new Result<D>().setCode(ResultCode.BID_SUCCESS_CONCLUED_FAIL.code()).setMessage(BID_SUCCESS_CONCLUED_FAIL_MESSAGE).setData(date);
+    }
+    public static <D> Result bidSuccessConcluedSuccess(D date) {
+        return new Result<D>().setCode(ResultCode.BID_SUCCESS_CONCLUED_SUCCESS.code()).setMessage(BID_SUCCESS_CONCLUED_SUCCESS_MESSAGE).setData(date);
+    }
 }
