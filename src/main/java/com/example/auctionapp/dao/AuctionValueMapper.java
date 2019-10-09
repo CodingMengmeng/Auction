@@ -1,8 +1,11 @@
 package com.example.auctionapp.dao;
 
 import com.example.auctionapp.entity.AuctionValue;
+import com.example.auctionapp.vo.WinRateRequestVo;
 import org.apache.ibatis.annotations.Param;
 import tk.mybatis.mapper.common.BaseMapper;
+
+import java.util.List;
 
 
 /**
@@ -43,4 +46,14 @@ public interface AuctionValueMapper extends BaseMapper<AuctionValue>{
      * @throws
      **/
     Integer deleteByGoodsIdAndCustomerId(@Param("goodsId") Integer goodsId,@Param("customerId") Integer customerId);
+
+    /**
+     * @description 查询某拍品的所有用户和对应的拍卖值数据
+     * @author mengjia
+     * @date 2019/10/9
+     * @param goodsId 拍品编号
+     * @return com.example.auctionapp.vo.WinRateRequestVo
+     * @throws
+     **/
+    List<WinRateRequestVo> selectAuctionValueInfoByGoodsId(@Param("goodsId") Integer goodsId);
 }

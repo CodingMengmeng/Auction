@@ -41,7 +41,7 @@
     </update>
 
     <update id="updateRank" parameterType="com.example.auctionapp.entity.RankingList">
-        update ranking_list set rank = #{rank}
+        update ranking_list set rank = #{rank},win_rate = #{winRate},update_time = #{updateTime}
         where goods_id = #{goodsId} and customer_id = #{customerId};
     </update>
 

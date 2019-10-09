@@ -36,4 +36,10 @@
         where goods_id = #{goodsId}
         and customer_id = #{customerId};
     </delete>
+
+    <select id="selectAuctionValueInfoByGoodsId"  resultType="com.example.auctionapp.vo.WinRateRequestVo">
+        SELECT customer_value,customer_id
+        FROM auction_value
+        WHERE goods_id = #{goodsId};
+    </select>
 </mapper>

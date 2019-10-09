@@ -126,13 +126,13 @@ public class Result<T> {
         return new Result<D>().setCode(code).setMessage(message).setData(data);
     }
 
-    public static <D> Result bidFail(D date) {
-        return new Result<D>().setCode(ResultCode.BID_FAIL.code()).setMessage(BID_FAIL_MESSAGE).setData(date);
+    public static <D> Result bidFail(D data) {
+        return new Result<D>().setCode(ResultCode.BID_FAIL.code()).setMessage(BID_FAIL_MESSAGE).setData(data);
     }
-    public static <D> Result bidSuccessConcluedFail(D date) {
-        return new Result<D>().setCode(ResultCode.BID_SUCCESS_CONCLUED_FAIL.code()).setMessage(BID_SUCCESS_CONCLUED_FAIL_MESSAGE).setData(date);
+    public static <D> Result bidSuccessConcluedFail(D data) {
+        return new Result<D>().setCode(ResultCode.BID_SUCCESS_CONCLUED_FAIL.code()).setMessage(BID_SUCCESS_CONCLUED_FAIL_MESSAGE).setData(data);
     }
-    public static <D> Result bidSuccessConcluedSuccess(D date) {
-        return new Result<D>().setCode(ResultCode.BID_SUCCESS_CONCLUED_SUCCESS.code()).setMessage(BID_SUCCESS_CONCLUED_SUCCESS_MESSAGE).setData(date);
+    public static <D> Result bidSuccessConcluedSuccess(D data) {
+        return new Result<D>().setCode(ResultCode.BID_SUCCESS_CONCLUED_SUCCESS.code()).setMessage(BID_SUCCESS_CONCLUED_SUCCESS_MESSAGE).setData(data);
     }
 }

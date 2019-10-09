@@ -20,13 +20,12 @@ import com.example.auctionapp.entity.*;
 import com.example.auctionapp.entity.ext.MarkupRecordClassify;
 import com.example.auctionapp.entity.ext.MarkupRecordSummary;
 import com.example.auctionapp.service.IAuctionGoodsService;
+import com.example.auctionapp.service.IDealService;
 import com.example.auctionapp.service.IMarkupRecordHisService;
 import com.example.auctionapp.service.IMarkupRecordService;
 import com.example.auctionapp.util.CalcUtils;
 import com.example.auctionapp.util.DateTimeUtil;
-import com.example.auctionapp.vo.AuctionGoodsVO;
-import com.example.auctionapp.vo.BadgeCustomerVo;
-import com.example.auctionapp.vo.BidInfoVo;
+import com.example.auctionapp.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.jdbc.Null;
 import org.springframework.beans.BeanUtils;
@@ -104,6 +103,9 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
 
     @Resource
     private MessageMapper messageMapper;
+
+    @Resource
+    private IDealService iDealService;
 
     /**
      * 查询正在拍卖的拍品
@@ -488,19 +490,19 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             //更新排行表中的拍卖值
             rankingListMapper.updateGoodsValue(rankingListPo);
         }
-        //重新更新排行
-        //1、获取该拍品的所有记录（已按拍卖值大小排序）
+        //重新更新排行，并更新拍中几率
+        //1、获取该拍品的所有记录（已按拍卖值由大到小排序）
         List<RankingList> rankingLists = rankingListMapper.selectByGoodsId(bidInfoVo.getGoodsId());
-        //2、判断是否为多条，多条则依次更新rank，否则跳过更新
-        if(rankingLists.size() > 1){
-            //3、根据拍品ID和客户ID依次更新排行rank字段
-            for(int seq = 1;seq <= rankingLists.size();seq++){
-                rankingLists.get(seq - 1).setRank(seq);
-                rankingLists.get(seq - 1).setUpdateTime(LocalDateTime.now());
-                rankingListMapper.updateRank(rankingLists.get(seq - 1));
-            }
-        }else{
-            log.info("don't need to update rank for goods_id = " + bidInfoVo.getGoodsId());
+        //2、计算拍中几率
+        List<WinRateRequestVo> winRateRequestVos = auctionValueMapper.selectAuctionValueInfoByGoodsId(bidInfoVo.getGoodsId());
+        log.info(winRateRequestVos.toString());
+        List<WinRateResponseVo> winRateResponseVos = iDealService.calWinRate(winRateRequestVos);
+        //3、根据拍品ID和客户ID依次更新排行rank字段和win_rate字段
+        for(int seq = 1;seq <= rankingLists.size();seq++){
+            rankingLists.get(seq - 1).setRank(seq);
+            rankingLists.get(seq - 1).setUpdateTime(LocalDateTime.now());
+            rankingLists.get(seq -1).setWinRate(winRateResponseVos.get(seq - 1).getWinRate());
+            rankingListMapper.updateRank(rankingLists.get(seq - 1));
         }
     }
 
@@ -512,10 +514,10 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
      * @param subjectId 用户ID
      * @param payBeans 本次消费的拍豆
      * @param currentBeans 当前已消费的拍豆
-     * @return int 返回匹配的条数
+     * @return void
      * @throws
      **/
-    private int updateCustomerBadgeBeans(int emblemId,int subjectId,
+    private void updateCustomerBadgeBeans(int emblemId,int subjectId,
                                          BigDecimal payBeans,BigDecimal currentBeans,int emblemType){
         BigDecimal newBeans = currentBeans.add(payBeans);
         int newEmblemId = 0;
@@ -523,10 +525,8 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         //2-贡献徽章
         if(emblemType == 1){
             newEmblemId = CalcUtils.friendEmblemLevelIdMap.get(CalcUtils.calcFriendBadgeCoefficient(newBeans));
-        }else if(emblemType == 2){
+        }else {
             newEmblemId = CalcUtils.ctrbEmblemLevelIdMap.get(CalcUtils.calcCtrbBadgeCoefficient(newBeans));
-        }else{
-            return 0;
         }
         BadgeCustomerVo badgeCustomerVo = new BadgeCustomerVo();
         badgeCustomerVo.setEmblemId(emblemId);
@@ -534,12 +534,38 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         badgeCustomerVo.setBeans(newBeans);
         badgeCustomerVo.setNewEmblemId(newEmblemId);
         int effectNum = badgeCustomerMapper.updateCustomerctrbBadgeBeans(badgeCustomerVo);
-        if(effectNum != 0){
-            log.info("更新" + effectNum + "条数据");
-            return effectNum;
+        log.info("更新" + effectNum + "条数据");
+    }
+
+    /**
+     * @description badge_customer表中新增记录
+     * @author mengjia
+     * @date 2019/10/9
+     * @param subjectId 用户ID
+     * @param payBeans 消耗拍豆
+     * @param emblemType 徽章类型
+     * @return void
+     * @throws
+     **/
+    private void insertCustomerBadgeBeans(int subjectId,
+                                          BigDecimal payBeans,int emblemType){
+        //根据徽章类型获取获取徽章等级编号
+        //1-好友徽章；2-贡献徽章
+        int emblemId = 0;
+        if(emblemType == 1){
+            emblemId = CalcUtils.friendEmblemLevelIdMap.get(CalcUtils.calcFriendBadgeCoefficient(payBeans));
         }else{
-            return 0;
+            emblemId = CalcUtils.ctrbEmblemLevelIdMap.get(CalcUtils.calcCtrbBadgeCoefficient(payBeans));
         }
+        BadgeCustomer badgeCustomer = new BadgeCustomer();
+        //设置徽章等级编号
+        badgeCustomer.setEmblemId(emblemId);
+        //设置用户ID
+        badgeCustomer.setCustomerId(subjectId);
+        //设置消耗拍豆
+        badgeCustomer.setBeans(payBeans);
+        badgeCustomerMapper.insert(badgeCustomer);
+
     }
 
     /**
@@ -703,10 +729,11 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
      * @date 2019/10/7
      * @param goodsId 拍品编号
      * @param customerId 拍中用户编号
+     * @param name 拍中用户名字
      * @return void
      * @throws
      **/
-    private void dealWinnerStorage(Integer goodsId, Integer customerId){
+    private void dealWinnerStorage(Integer goodsId, Integer customerId,String name){
         //入库订单表
 
         //取出加价表中的分类汇总信息，包括：
@@ -789,6 +816,8 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
 
         //入库消息表
         Message message = new Message();
+        //系统消息
+
         //账户类型 type 1-系统消息
         message.setType(1);
         //拍品ID goods_id
@@ -796,8 +825,27 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         //主体id subject_id
         message.setSubjectId(customerId);
         //消息内容 message_info
-        message.setMessageInfo("用户编号" + customerId + "以" + auctionValueVo.getBid()
+        message.setMessageInfo("用户" + name + "以" + auctionValueVo.getBid()
                 + "的价格拍中了" + auctionGoods.getGoodsName() + "!");
+        //发送标志 0-未发送
+        message.setSendFlag(0);
+        //读标志 0-未读
+        message.setReadFlag(0);
+        //账户状态 1-生效
+        message.setStatus(1);
+        messageMapper.insert(message);
+
+        //用户消息
+
+        //系统消息
+        //账户类型 type 2-用户消息
+        message.setType(2);
+        //拍品ID goods_id
+        message.setGoodsId(goodsId);
+        //主体id subject_id
+        message.setSubjectId(customerId);
+        //消息内容 message_info
+        message.setMessageInfo("恭喜您，竞拍成功！");
         //发送标志 0-未发送
         message.setSendFlag(0);
         //读标志 0-未读
@@ -844,35 +892,36 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         affectedNum = rankingListMapper.deleteByGoodsIdAndCustomerId(goodsId,customerId);
         log.info("已删除排行表" + customerId + "的" + affectedNum + "条记录");
         //重新计算排行
-        //1、获取该拍品的所有记录（已按拍卖值大小排序）
+        //1、获取该拍品的所有记录（已按拍卖值由大到小排序）
         List<RankingList> rankingLists = rankingListMapper.selectByGoodsId(goodsId);
-        //2、判断是否为多条，多条则依次更新rank，否则跳过更新
-        if(rankingLists.size() > 1){
-            //3、根据拍品ID和客户ID依次更新排行rank字段
-            for(int seq = 1;seq <= rankingLists.size();seq++){
-                rankingLists.get(seq - 1).setRank(seq);
-                rankingLists.get(seq - 1).setUpdateTime(LocalDateTime.now());
-                rankingListMapper.updateRank(rankingLists.get(seq - 1));
-            }
-        }else{
-            log.info("don't need to update rank for goods_id = " + goodsId);
+        //2、计算拍中几率
+        List<WinRateRequestVo> winRateRequestVos = auctionValueMapper.selectAuctionValueInfoByGoodsId(goodsId);
+        List<WinRateResponseVo> winRateResponseVos = iDealService.calWinRate(winRateRequestVos);
+        //3、根据拍品ID和客户ID依次更新排行rank字段
+        for(int seq = 1;seq <= rankingLists.size();seq++){
+            rankingLists.get(seq - 1).setRank(seq);
+            rankingLists.get(seq - 1).setUpdateTime(LocalDateTime.now());
+            rankingLists.get(seq -1).setWinRate(winRateResponseVos.get(seq - 1).getWinRate());
+            rankingListMapper.updateRank(rankingLists.get(seq - 1));
         }
-
     }
     @Override
-    @Transactional(rollbackFor = RuntimeException.class, timeout = 5)
+    @Transactional(rollbackFor = RuntimeException.class)
     public Result processBid(BidInfoVo bidInfoVo){
         if(bidInfoVo.getActualPayBeans().compareTo(CalcUtils.ZERO) == 0
                 && bidInfoVo.getMortgageFreeBean().compareTo(CalcUtils.ZERO) == 0){
             log.warn("Commission and with beans are both equal to zero,please check.");
-            return ResultGenerator.genFailResult("出价失败");
+            return Result.bidFail("出价失败");
         }
         if(isBidSuccess(bidInfoVo.getCustomerId(),bidInfoVo.getBidPrice(),CalcUtils.COMMISSION_PROPORTION)){
             //获取用户徽章信息
             List<BadgeCustomerVo> badgeCustomerInfos = getCustomerBadgeInfos(bidInfoVo.getCustomerId());
-            //更新拍卖值表
+            //更新拍卖值表、排行表
             updateOrInsertAuctionValueData(bidInfoVo,badgeCustomerInfos);
-            //用户存在徽章信息，更新之，否则新增徽章记录
+            //更新标志
+            int updateFlag = 0;
+            //更新贡献徽章
+            //用户存在贡献徽章信息，更新之，否则新增贡献徽章记录
             if(badgeCustomerInfos != null && badgeCustomerInfos.size() > 0){
                 for(BadgeCustomerVo badgeCustomerInfo : badgeCustomerInfos){
                     if(badgeCustomerInfo.getName() == "贡献徽章"){
@@ -880,38 +929,85 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
                                 ,bidInfoVo.getCustomerId()
                                 ,bidInfoVo.getActualPayBeans()
                                 ,badgeCustomerInfo.getBeans()
-                                ,badgeCustomerInfo.getId());
+                                ,2);
+                        updateFlag = 1;
                         break;
                     }else{
                         log.info("Emblem type is " + badgeCustomerInfo.getName() + ",skip it.");
                     }
                 }
+                //list中不包含用户的贡献徽章信息，则未执行更新操作，此时需新增记录
+                if(updateFlag == 0){
+                    insertCustomerBadgeBeans(bidInfoVo.getCustomerId(),bidInfoVo.getActualPayBeans(),2);
+                }
             }else{
-                BadgeCustomer badgeCustomer = new BadgeCustomer();
-                //获取徽章等级编号
-                int emblemId = CalcUtils.ctrbEmblemLevelIdMap.get(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans()));
-                //设置徽章等级编号
-                badgeCustomer.setEmblemId(emblemId);
-                //设置用户ID
-                badgeCustomer.setCustomerId(bidInfoVo.getCustomerId());
-                //设置消耗拍豆
-                badgeCustomer.setBeans(bidInfoVo.getActualPayBeans());
-                badgeCustomerMapper.insert(badgeCustomer);
+                insertCustomerBadgeBeans(bidInfoVo.getCustomerId(),bidInfoVo.getActualPayBeans(),2);
             }
+            //更新好友徽章
+            //查询该用户被谁邀请
+            Customer customer = customerMapper.selectById(bidInfoVo.getCustomerId());
+            if(customer.getInvitId() != null) {
+                int invitedId = customer.getInvitId();
+                List<BadgeCustomerVo> badgeInvitedCustomerInfos = getCustomerBadgeInfos(invitedId);
+                //邀请用户存在好友徽章，更新之，否则新增好友徽章记录
+                if(badgeInvitedCustomerInfos != null && badgeInvitedCustomerInfos.size() > 0){
+                    updateFlag = 0;
+                    for(BadgeCustomerVo badgeInvitedCustomerInfo : badgeInvitedCustomerInfos){
+                        if(badgeInvitedCustomerInfo.getName() == "好友徽章"){
+                            updateCustomerBadgeBeans(badgeInvitedCustomerInfo.getEmblemId()
+                                    ,badgeInvitedCustomerInfo.getCustomerId()
+                                    ,bidInfoVo.getActualPayBeans()
+                                    ,badgeInvitedCustomerInfo.getBeans()
+                                    ,1);
+                            updateFlag = 1;
+                            break;
+                        }else{
+                            log.info("Emblem type is " + badgeInvitedCustomerInfo.getName() + ",skip it.");
+                        }
+                    }
+
+                    //list中不包含用户的贡献徽章信息，则未执行更新操作，此时需新增记录
+                    if(updateFlag == 0){
+                        insertCustomerBadgeBeans(invitedId,bidInfoVo.getActualPayBeans(),1);
+                    }
+                }else{
+                    insertCustomerBadgeBeans(invitedId,bidInfoVo.getActualPayBeans(),1);
+                }
+
+            }else{
+                log.info("用户" + customer.getName() + "无对应的邀请用户");
+            }
+
             //入库加价表
             MarkupRecordSummary markupRecordSummary = markupRecordMapper.selectSummaryByGoodsId(bidInfoVo.getGoodsId());
             insertMarkupRecord(bidInfoVo,markupRecordSummary);
             //入库交易流水
             insertTransLog(bidInfoVo);
-            //处理拍中后的入库
-            //包括订单表、拍品表、中拍记录表、消息表
-            dealWinnerStorage(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
-            //处理拍中后的结转
-            //包括加价表、好友助力表、拍卖值表、排行表
-            dealWinnerCarryforward(bidInfoVo.getGoodsId(),bidInfoVo.getCustomerId());
-            return ResultGenerator.genSuccessResult();
+            try {
+                DealConcluedVo dealConcluedVo = iDealService.isDealConclued(bidInfoVo.getGoodsId());
+                //若拍中，则执行入库和结转
+                if(dealConcluedVo.isConclued()){
+                    //处理拍中后的入库
+                    //包括订单表、拍品表、中拍记录表、消息表
+                    dealWinnerStorage(bidInfoVo.getGoodsId(),dealConcluedVo.getConcluedUserId(),customer.getName());
+
+                    //用戶返佣
+                    iDealService.executeCustomerCommision(dealConcluedVo.getConcluedUserId(),bidInfoVo.getGoodsId());
+                    //平台返佣
+                    iDealService.executePlatformCommision(dealConcluedVo.getConcluedUserId(),bidInfoVo.getGoodsId());
+                    //代理返佣
+                    iDealService.executeAgentCommision(dealConcluedVo.getConcluedUserId(),bidInfoVo.getGoodsId());
+                    //处理拍中后的结转
+                    //包括加价表、好友助力表、拍卖值表、排行表
+                    dealWinnerCarryforward(bidInfoVo.getGoodsId(),dealConcluedVo.getConcluedUserId());
+                    return Result.bidSuccessConcluedSuccess("出价成功并拍中");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return Result.bidSuccessConcluedFail("出价成功未拍中");
         }else{
-            return ResultGenerator.genFailResult("出价失败");
+            return Result.bidFail("出价失败");
         }
     }
 

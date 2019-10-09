@@ -139,5 +139,10 @@ public class Customer implements Serializable {
     @TableField("version")
     private Integer version;
 
+    /**
+     * 自关联-邀请好友id
+     */
+    @TableField("invit_id")
+    private Integer invitId;
 
 }

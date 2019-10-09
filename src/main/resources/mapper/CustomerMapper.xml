@@ -20,13 +20,14 @@
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="version" property="version"/>
+        <result column="invit_id" property="invit_id"/>
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="Base_Column_List">
         id, head_portrait, name, phone,case sex when 1 then '男' when 0 then '女' end,
         agent_id,real_name,identity_card,identity_card_type,
-       verify_status,address,open_id,remark, create_time,update_time, version
+       verify_status,address,open_id,remark, create_time,update_time, version,invit_id
     </sql>
 
     <select id="selectCustomerAndAccount" resultType="java.util.Map">
