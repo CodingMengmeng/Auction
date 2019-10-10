@@ -389,9 +389,9 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         if(badgeCustomerInfos != null && badgeCustomerInfos.size() > 0) {
             for(BadgeCustomerVo badgeCustomerInfo : badgeCustomerInfos){
                 //贡献徽章系数和好友徽章系数赋值
-                if(badgeCustomerInfo.getName() == "贡献徽章"){
+                if(badgeCustomerInfo.getName().equals("贡献徽章")){
                     ctrbBadgeCoefficient = CalcUtils.calcCtrbBadgeCoefficient(badgeCustomerInfo.getBeans());
-                }else if(badgeCustomerInfo.getName() == "好友徽章"){
+                }else if(badgeCustomerInfo.getName().equals("好友徽章")){
                     friendBadgeCoefficient = CalcUtils.calcFriendBadgeCoefficient(badgeCustomerInfo.getBeans());
                 }else{
                     log.info("Other types of badges,do nothing.");
@@ -409,7 +409,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             auctionValueVo.setGoodsId(bidInfoVo.getGoodsId());
             //拍卖值
             auctionValueVo.setCustomerValue(CalcUtils.calcAuctionValue(
-                    bidInfoVo.getActualPayBeans(),
+                    bidInfoVo.getShouldPayBeans(),
                     ctrbBadgeCoefficient,
                     friendBadgeCoefficient
             ));
@@ -442,7 +442,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             rankingListVo.setGoodsId(bidInfoVo.getGoodsId());
             //拍卖值 goods_value
             rankingListVo.setGoodsValue(CalcUtils.calcAuctionValue(
-                    bidInfoVo.getActualPayBeans(),
+                    bidInfoVo.getShouldPayBeans(),
                     ctrbBadgeCoefficient,
                     friendBadgeCoefficient));
             rankingListVo.setCreateTime(LocalDateTime.now());
@@ -458,7 +458,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             //拍卖值累加
             auctionValuePo.setCustomerValue(auctionValueVo.getCustomerValue().add(
                     CalcUtils.calcAuctionValue(
-                            bidInfoVo.getActualPayBeans(),
+                            bidInfoVo.getShouldPayBeans(),
                             ctrbBadgeCoefficient,
                             friendBadgeCoefficient
                     )));
@@ -483,7 +483,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             //拍卖值累加
             rankingListPo.setGoodsValue(rankingListVo.getGoodsValue().add(
                     CalcUtils.calcAuctionValue(
-                            bidInfoVo.getActualPayBeans(),
+                            bidInfoVo.getShouldPayBeans(),
                             ctrbBadgeCoefficient,
                             friendBadgeCoefficient
                     )));
@@ -924,7 +924,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             //用户存在贡献徽章信息，更新之，否则新增贡献徽章记录
             if(badgeCustomerInfos != null && badgeCustomerInfos.size() > 0){
                 for(BadgeCustomerVo badgeCustomerInfo : badgeCustomerInfos){
-                    if(badgeCustomerInfo.getName() == "贡献徽章"){
+                    if(badgeCustomerInfo.getName().equals("贡献徽章")){
                         updateCustomerBadgeBeans(badgeCustomerInfo.getEmblemId()
                                 ,bidInfoVo.getCustomerId()
                                 ,bidInfoVo.getActualPayBeans()
@@ -953,7 +953,7 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
                 if(badgeInvitedCustomerInfos != null && badgeInvitedCustomerInfos.size() > 0){
                     updateFlag = 0;
                     for(BadgeCustomerVo badgeInvitedCustomerInfo : badgeInvitedCustomerInfos){
-                        if(badgeInvitedCustomerInfo.getName() == "好友徽章"){
+                        if(badgeInvitedCustomerInfo.getName().equals("好友徽章")){
                             updateCustomerBadgeBeans(badgeInvitedCustomerInfo.getEmblemId()
                                     ,badgeInvitedCustomerInfo.getCustomerId()
                                     ,bidInfoVo.getActualPayBeans()
