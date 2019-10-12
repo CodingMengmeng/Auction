@@ -96,4 +96,6 @@ public class Account implements Serializable {
     /**
      * 赠豆
      */
+    @TableField("with_beans")
+    private BigDecimal withBeans;
 }

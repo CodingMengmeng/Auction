@@ -21,6 +21,7 @@
     </resultMap>
     <update id="updateAuctionValueData" parameterType="com.example.auctionapp.entity.AuctionValue">
         update auction_value set customer_value = #{customerValue},contribute_badge_value = #{contributeBadgeValue},
+                                  friend_badge_value = #{friendBadgeValue},
                                   bid = #{bid},num = #{num},consume_beans = #{consumeBeans},consume_give = #{consumeGive}
                                   where customer_id = #{customerId} and goods_id = #{goodsId};
     </update>

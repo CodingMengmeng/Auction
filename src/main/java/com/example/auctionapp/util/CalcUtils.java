@@ -164,21 +164,25 @@ public class CalcUtils {
         }
     }
     /**
-     * @description 根据佣金、贡献徽章系数、好友徽章系数和好友助力值计算拍卖值
-     * 拍卖值公式：佣金*贡献徽章系数 + 佣金*好友徽章系数 + 好友助力值
-     * 如果贡献徽章等级为0级（贡献徽章系数为1.00）,但是佣金 > 100，则大于100的部分贡献徽章系数为1.01
+     * @description 根据应支付拍豆、贡献徽章系数、好友徽章系数和好友助力值计算拍卖值
+     * 拍卖值基数 = 实际支付拍豆（佣金） + 赠豆 = 应支付拍豆
+     * 拍卖值公式：拍卖值基数 +贡献徽章加成拍卖值 +好友徽章加成拍卖值 +好友徽章加成拍卖值 + 好友助力拍卖值
+     * 贡献徽章加成拍卖值 = 拍卖值基数*(贡献徽章系数 - 1)
+     * 如果是0级，但是拍卖值基数>100，那么大于100的部分贡献徽章系数是1.01
+     * 好友徽章加成拍卖值 = 拍卖值基数*(好友徽章系数 -1)
+
      * @author mengjia
      * @date 2019/8/29
-     * @param commissionValue   佣金
+     * @param shouldPayBeans   应支付拍豆
      * @param ctrbBadgeCoefficient    贡献徽章系数
      * @param friendBadgeCoefficient  好友徽章系数
      * @param friendAsstValue   好友助力值
      * @return java.math.BigDecimal 满足要求时，返回计算结果，精度为2；否则返回null
      * @throws
      **/
-    public static BigDecimal calcAuctionValue(BigDecimal commissionValue,BigDecimal ctrbBadgeCoefficient,
+    public static BigDecimal calcAuctionValue(BigDecimal shouldPayBeans,BigDecimal ctrbBadgeCoefficient,
                                               BigDecimal friendBadgeCoefficient,BigDecimal friendAsstValue){
-        if(commissionValue.compareTo(ZERO) <= 0
+        if(shouldPayBeans.compareTo(ZERO) <= 0
                 || ctrbBadgeCoefficient.compareTo(BADGE_COEFFICIENT_BASIC) < 0
                 || friendBadgeCoefficient.compareTo(BADGE_COEFFICIENT_BASIC) < 0
                 || friendAsstValue.compareTo(ZERO) < 0){
@@ -187,36 +191,39 @@ public class CalcUtils {
         }
         BigDecimal auctionValue = ZERO;
         if(ctrbBadgeCoefficient.compareTo(BADGE_COEFFICIENT_BASIC) == 0
-                && commissionValue.compareTo(COMMISSION_VALUE_100) > 0) {
+                && shouldPayBeans.compareTo(COMMISSION_VALUE_100) > 0) {
             //拍卖值基数大于100的贡献徽章系数加成
-            BigDecimal temp1 = commissionValue.subtract(COMMISSION_VALUE_100)
-                    .multiply(BADGE_COEFFCIENT_LEVEL_1);
+            BigDecimal temp1 = shouldPayBeans.subtract(COMMISSION_VALUE_100)
+                    .multiply((BADGE_COEFFCIENT_LEVEL_1.subtract(BADGE_COEFFICIENT_BASIC)));
             //好友贡献徽章系数加成 + 好友助力值
-            BigDecimal temp2 = commissionValue.multiply(friendBadgeCoefficient).add(friendAsstValue);
-            //拍卖值
-            auctionValue = COMMISSION_VALUE_100.add(temp1).add(temp2);
+            BigDecimal temp2 = shouldPayBeans.multiply((friendBadgeCoefficient.subtract(BADGE_COEFFICIENT_BASIC))).add(friendAsstValue);
+            //拍卖值 = 拍卖值基数 + 拍卖值基数*(贡献徽章系数 - 1) + 拍卖值基数*(好友徽章系数 - 1)
+            auctionValue = shouldPayBeans.add(temp1).add(temp2);
             log.info("拍卖值 = " + precisionConvert(auctionValue,UTIL_SCALE));
             return precisionConvert(auctionValue,UTIL_SCALE);
         }else{
-            auctionValue = ctrbBadgeCoefficient.add(friendBadgeCoefficient)
-                    .multiply(commissionValue).add(friendAsstValue);
+            //拍卖值公式：拍卖值基数 +贡献徽章加成拍卖值 +好友徽章加成拍卖值 +好友徽章加成拍卖值 + 好友助力拍卖值
+            auctionValue = shouldPayBeans.add(
+                    shouldPayBeans.multiply((ctrbBadgeCoefficient.subtract(BADGE_COEFFICIENT_BASIC)))
+                                        ).add(shouldPayBeans.multiply((friendBadgeCoefficient.subtract(BADGE_COEFFICIENT_BASIC)))
+                                        ).add(friendAsstValue);
             log.info("拍卖值 = " + precisionConvert(auctionValue,UTIL_SCALE));
             return precisionConvert(auctionValue,UTIL_SCALE);
         }
     }
 
     /**
-     * @description 根据佣金、贡献徽章系数、好友徽章系数和好友助力值计算拍卖值，其中好友助力值不填时，默认为0.00
+     * @description 根据用户应支付拍豆、贡献徽章系数、好友徽章系数和好友助力值计算拍卖值，其中好友助力值不填时，默认为0.00
      * @author mengjia
      * @date 2019/9/7
-     * @param commissionValue   佣金
+     * @param shouldPayBeans   应支付拍豆
      * @param ctrbBadgeCoefficient    贡献徽章系数
      * @param friendBadgeCoefficient  好友徽章系数
      * @return java.math.BigDecimal 满足要求时，返回计算结果，精度为2；否则返回null
      * @throws
      **/
-    public static BigDecimal calcAuctionValue(BigDecimal commissionValue,BigDecimal ctrbBadgeCoefficient,
+    public static BigDecimal calcAuctionValue(BigDecimal shouldPayBeans,BigDecimal ctrbBadgeCoefficient,
                                               BigDecimal friendBadgeCoefficient){
-        return calcAuctionValue(commissionValue,ctrbBadgeCoefficient,friendBadgeCoefficient,new BigDecimal("0.00"));
+        return calcAuctionValue(shouldPayBeans,ctrbBadgeCoefficient,friendBadgeCoefficient,new BigDecimal("0.00"));
     }
 }

@@ -39,6 +39,31 @@ public interface AccountMapper extends BaseMapper<Account> {
      */
     Integer updateBalanceAndFrozenById(Account account);
 
+    /**
+     * @description 根据用户编号查询用户的拍豆和赠豆
+     * @author mengjia
+     * @date 2019/10/11
+     * @param subjectId 用户编号
+     * @return 字段和值的映射
+     * @throws
+     **/
     Map<String,Object> selectBalanceAndWithBeansById(@Param("subjectId") Integer subjectId);
+    /**
+     * @description 根据用户编号查询账户表信息
+     * @author mengjia
+     * @date 2019/10/11
+     * @param subjectId
+     * @return com.example.auctionapp.entity.Account 账户表实体
+     * @throws
+     **/
     Account selectAccountInfoBySubjectId(@Param("subjectId") Integer subjectId);
+    /**
+     * @description 根据用户编号更新拍豆和赠豆
+     * @author mengjia
+     * @date 2019/10/11
+     * @param account
+     * @return java.lang.Integer
+     * @throws
+     **/
+    Integer updateBalanceAndWithBeansById(Account account);
 }
