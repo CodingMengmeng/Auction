@@ -328,14 +328,15 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
     /**
      * @description 判断出价是否成功，私有函数
      * @author mengjia
-     * @date 2019/9/18
-     * @param subjectId 用户id，根据请求Header拿到
-     * @param bidPrice    出价，根据请求参数拿到
-     * @param proportion    比例，当前为5%
+     * @date 2019/10/11
+     * @param bidInfoVo 出价信息
+     * @param proportion 佣金比例
      * @return boolean
      * @throws
      **/
-    private boolean isBidSuccess(int subjectId, BigDecimal bidPrice, BigDecimal proportion ){
+    private boolean isBidSuccess(BidInfoVo bidInfoVo, BigDecimal proportion ){
+        int subjectId = bidInfoVo.getCustomerId();
+        BigDecimal bidPrice = bidInfoVo.getBidPrice();
         BigDecimal commission = bidPrice.multiply(proportion);
         Map<String,Object> result = accountMapper.selectBalanceAndWithBeansById(subjectId);
         BigDecimal balance;
@@ -353,6 +354,11 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
         log.info("balance:" + balance);
         log.info("withBeans:" + withBeans);
         if((balance.add(withBeans)).compareTo(commission) > -1){
+            //出价成功，减去该用户的余额
+            Account account = new Account();
+            account.setBalance(balance.subtract(bidInfoVo.getActualPayBeans()));
+            account.setWithBeans(withBeans.subtract(bidInfoVo.getMortgageFreeBean()));
+            accountMapper.updateBalanceAndWithBeansById(account);
             return true;
         }else{
             return false;
@@ -413,8 +419,12 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
                     ctrbBadgeCoefficient,
                     friendBadgeCoefficient
             ));
-            //记录每一次出价贡献徽章的加成
-            auctionValueVo.setContributeBadgeValue(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans()));
+            //贡献徽章加成点数
+            auctionValueVo.setContributeBadgeValue((ctrbBadgeCoefficient.subtract(CalcUtils.BADGE_COEFFICIENT_BASIC))
+                                                        .multiply(bidInfoVo.getShouldPayBeans()));
+            //好友徽章加成点数
+            auctionValueVo.setFriendBadgeValue((friendBadgeCoefficient.subtract(CalcUtils.BADGE_COEFFICIENT_BASIC))
+                                                        .multiply(bidInfoVo.getShouldPayBeans()));
             //最高出价
             auctionValueVo.setBid(bidInfoVo.getBidPrice());
             //出价次数
@@ -462,8 +472,12 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
                             ctrbBadgeCoefficient,
                             friendBadgeCoefficient
                     )));
-            //记录每一次出价贡献徽章的加成
-            auctionValuePo.setContributeBadgeValue(auctionValueVo.getContributeBadgeValue().add(CalcUtils.calcCtrbBadgeCoefficient(bidInfoVo.getActualPayBeans())));
+            //累加贡献徽章加成点数
+            auctionValuePo.setContributeBadgeValue((ctrbBadgeCoefficient.subtract(CalcUtils.BADGE_COEFFICIENT_BASIC))
+                    .multiply(bidInfoVo.getShouldPayBeans()).add(auctionValueVo.getContributeBadgeValue()));
+            //累加好友徽章加成点数
+            auctionValuePo.setFriendBadgeValue((friendBadgeCoefficient.subtract(CalcUtils.BADGE_COEFFICIENT_BASIC))
+                    .multiply(bidInfoVo.getShouldPayBeans()).add(auctionValueVo.getFriendBadgeValue()));
             //最高出价，当前出价与原出价相比，若大于则更新
             auctionValuePo.setBid(bidInfoVo.getBidPrice().compareTo(auctionValueVo.getBid()) > 0 ? bidInfoVo.getBidPrice() : auctionValueVo.getBid());
             //出价次数累加
@@ -913,11 +927,12 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             log.warn("Commission and with beans are both equal to zero,please check.");
             return Result.bidFail("出价失败");
         }
-        if(isBidSuccess(bidInfoVo.getCustomerId(),bidInfoVo.getBidPrice(),CalcUtils.COMMISSION_PROPORTION)){
+        if(isBidSuccess(bidInfoVo,CalcUtils.COMMISSION_PROPORTION)){
             //获取用户徽章信息
             List<BadgeCustomerVo> badgeCustomerInfos = getCustomerBadgeInfos(bidInfoVo.getCustomerId());
             //更新拍卖值表、排行表
             updateOrInsertAuctionValueData(bidInfoVo,badgeCustomerInfos);
+
             //更新标志
             int updateFlag = 0;
             //更新贡献徽章

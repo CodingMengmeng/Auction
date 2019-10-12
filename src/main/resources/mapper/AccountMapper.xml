@@ -45,4 +45,9 @@
         select * from account
         where subject_id = #{subjectId};
     </select>
+
+    <update id="updateBalanceAndWithBeansById" parameterType="com.example.auctionapp.entity.Account">
+        update account set balance = #{balance},with_beans = #{withBeans}
+        WHERE subject_id = #{subjectId};
+    </update>
 </mapper>
