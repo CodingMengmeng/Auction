@@ -68,7 +68,7 @@ public class CalcUtils {
         friendEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_5,5);
 
         ctrbEmblemLevelIdMap = new HashMap<>();
-        ctrbEmblemLevelIdMap.put(BADGE_COEFFICIENT_BASIC,11);
+        ctrbEmblemLevelIdMap.put(BADGE_COEFFICIENT_BASIC,12);
         ctrbEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_1,6);
         ctrbEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_2,7);
         ctrbEmblemLevelIdMap.put(BADGE_COEFFCIENT_LEVEL_3,8);
