@@ -151,4 +151,10 @@ public class AuctionGoods implements Serializable {
      */
     @TableField("rounds")
     private Integer rounds;
+
+    /**
+     * 拍豆池
+     */
+    @TableField("beans_pond")
+    private BigDecimal beansPond;
 }

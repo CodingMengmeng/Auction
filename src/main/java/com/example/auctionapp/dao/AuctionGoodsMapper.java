@@ -147,7 +147,25 @@ public interface AuctionGoodsMapper extends BaseMapper<AuctionGoods> {
      */
     List<Map<String, Object>> selectRandomAuctionGoods(List<Integer> id);
 
+    /**
+     * @description 根据拍品ID更新轮次
+     * @author mengjia
+     * @date 2019/10/17
+     * @param auctionGoods
+     * @return java.lang.Integer
+     * @throws
+     **/
     Integer updateRoundsById(AuctionGoods auctionGoods);
+
+    /**
+     * @description 根据拍品ID更新拍豆池
+     * @author mengjia
+     * @date 2019/10/17
+     * @param auctionGoods
+     * @return java.lang.Integer
+     * @throws
+     **/
+    Integer updateBeansPondById(AuctionGoods auctionGoods);
 
 
 }

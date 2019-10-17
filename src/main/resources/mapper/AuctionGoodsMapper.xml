@@ -459,4 +459,8 @@
     <update id="updateRoundsById" parameterType="com.example.auctionapp.entity.AuctionGoods">
       update auction_goods set rounds = #{rounds} where id = #{id};
     </update>
+
+    <update id="updateBeansPondById" parameterType="com.example.auctionapp.entity.AuctionGoods">
+        update auction_goods set beans_pond = #{beansPond} where id = #{id};
+    </update>
 </mapper>

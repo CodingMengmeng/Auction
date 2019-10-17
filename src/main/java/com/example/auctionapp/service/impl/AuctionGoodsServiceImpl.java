@@ -928,6 +928,13 @@ public class AuctionGoodsServiceImpl implements IAuctionGoodsService {
             return Result.bidFail("出价失败");
         }
         if(isBidSuccess(bidInfoVo,CalcUtils.COMMISSION_PROPORTION)){
+            //更新拍品表的拍豆池，拍豆池使用实际支付拍豆累加
+            //获取拍品表信息
+            AuctionGoods auctionGoods = auctionGoodsMapper.selectById(bidInfoVo.getGoodsId());
+            //取出beans_pond字段的值，若为空，则设为0.00
+            BigDecimal beansPond = Optional.ofNullable(auctionGoods.getBeansPond()).orElse(new BigDecimal("0.00"));
+            auctionGoods.setBeansPond(beansPond.add(bidInfoVo.getActualPayBeans()));
+            auctionGoodsMapper.updateBeansPondById(auctionGoods);
             //获取用户徽章信息
             List<BadgeCustomerVo> badgeCustomerInfos = getCustomerBadgeInfos(bidInfoVo.getCustomerId());
             //更新拍卖值表、排行表
